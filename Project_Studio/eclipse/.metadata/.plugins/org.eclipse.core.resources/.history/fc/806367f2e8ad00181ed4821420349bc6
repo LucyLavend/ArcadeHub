@@ -1,0 +1,250 @@
+package nl.thestructureworld.client.gui;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+
+import org.lwjgl.opengl.GL11;
+
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.multiplayer.WorldClient;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.renderer.WorldRenderer;
+import nl.thestructureworld.server.TheStructureWorldServer;
+
+
+public class IngameMenuAndOptionsGui extends GuiScreen
+{
+	public IngameMenuAndOptionsGui()
+	{
+		this.backGroundTexture = "/no_texture.png";
+	}
+	
+	public static String GraphicsLocation = "The Structure World/Graphics Options.txt";
+	public static boolean TextureFilterAnisotropicOrLOD_BIAS = false;
+	public static float TextureFilterAnisotropic = 4f;
+	public static int MultiSample = 4;
+	public static String basicTerrain = "None";
+	public static String grassTexture = "None";
+	public static String plantTexture = "None";
+	public static String terrainGrassTexture = "None";
+	public static String stoneTexture = "None";
+	public static boolean animatedGrass = true;
+	public static int randomPlantGenerater = 1;
+	public static int ClumpsOfGrass = 1;
+	public static double heightDifference = 80;
+	
+	/**
+	 * Gui and button list must be active
+	 */
+	public boolean optionGui = false;
+	public boolean terrainOption = false;
+	
+    /**
+     * Returns true if this GUI should pause the game when it is displayed in single-player
+     */
+    public boolean doesGuiPauseGame()
+    {
+        return true;
+    }
+    
+    /**
+     * Adds the buttons (and other controls) to the screen in question.
+     */
+    public void initGui()
+    {
+        this.buttonList.clear();
+        this.buttonList.add(new ButtonBasic(0, this.width / 2 - 100, this.height / 4 + 86 , "Options"));
+        ButtonBasic buttonServer;
+        this.buttonList.add(new ButtonBasic(1, this.width / 2 - 100, this.height / 4 + 120 , "Return To Menu"));
+        this.buttonList.add(buttonServer = new ButtonBasic(2, this.width / 2 - 100, this.height / 4 + 52 , "Launch Server"));
+        buttonServer.enabled = this.thestructureworld.isSingleplayer() && !this.thestructureworld.getIntegratedServer().getPublic();
+        if (!this.thestructureworld.isIntegratedServerRunning())
+        {
+            ((ButtonBasic)this.buttonList.get(0)).displayString = "Disconnect";
+        }
+        this.buttonList.add(new ButtonBasic(3, this.width / 2 - 100, this.height / 4 + 24 , "Return To Game"));
+    }
+
+    protected void actionPerformed(ButtonBasic button)
+    {
+    	if(!this.optionGui)
+    	{
+            if(button.id == 1)
+            {
+            	button.enabled = false;
+                this.thestructureworld.theWorld.sendQuittingDisconnectingPacket();
+                this.thestructureworld.loadWorld((WorldClient)null);
+                WorldRenderer.clearWorldDataClean();
+                this.thestructureworld.theWorld = null;
+                this.thestructureworld.displayGuiScreen(new GuiShareToLan(this));
+            }
+            if(button.id == 2)
+            { 
+                this.thestructureworld.displayGuiScreen(new GuiShareToLan(this));
+            }
+            if(button.id == 0)
+            {
+            	  this.buttonList.clear();
+            	  this.optionGui = true;
+            	  this.buttonList.add(new ButtonBasic(1, this.width / 2 - 50, this.height / 4 + 100 , 98, 20, "Back to Menu",5));  
+            	  this.buttonList.add(new ButtonBasic(2, this.width / 2 - 50, this.height / 4  , 98, 20, "Terrain",5));  
+            }
+            if(button.id == 3)
+            { 
+                this.thestructureworld.displayGuiScreen((GuiScreen)null);
+                this.thestructureworld.setIngameFocus();
+            }
+        }
+    	if(this.optionGui)
+    	{
+    		if(button.id == 1)
+            {
+            	   this.optionGui = false;
+            	   this.initGui();            
+            }
+    		if(button.id == 2)
+            {
+            	   this.optionGui = false;
+            	   this.terrainOption = true;  
+            	   this.buttonList.clear();
+            }
+    	}
+    	this.loadorwriteOptions(false);
+    }
+    
+    public boolean writeFile = true;
+    
+    public void loadorwriteOptions(boolean mustBeActive)
+    {
+    	if(this.terrainOption || mustBeActive)
+    	{
+    	  try 
+    	  {
+		  BufferedReader read = new BufferedReader(new FileReader(new File(FileBasicJava.source,GraphicsLocation )));
+		  if(this.terrainOption){this.buttonList.add(new ButtonBasic(0, this.width / 2 - 50, this.height / 4  , 98, 20, "Dirt Terrain",5));  }
+		  String line = "";
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Multi Sample"))
+          {
+		  this.MultiSample = Integer.parseInt(wholeSettingLine[1]);
+		  }}  
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Anisotropic or Lod Bias"))
+          { 
+		  this.TextureFilterAnisotropicOrLOD_BIAS = Boolean.parseBoolean(wholeSettingLine[1]);  
+		  }} 
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Texture Filter Anisotropic"))
+          {
+		  this.TextureFilterAnisotropic = Float.parseFloat(wholeSettingLine[1]);
+		  }}  
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Basic Terrain"))
+          {
+		  this.basicTerrain = ""+wholeSettingLine[1];
+		  if(this.terrainOption){this.drawCenteredString(this.fontRendererObj, this.basicTerrain, this.width / 2, this.height / 4-20, 16777215);}	
+          }}     
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Terrain Grass Texture"))
+          {
+		  this.terrainGrassTexture = ""+wholeSettingLine[1];
+	      }} 
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Grass Texture"))
+          {
+		  this.grassTexture = ""+wholeSettingLine[1];
+	      }} 
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Stone Texture"))
+          {
+		  this.stoneTexture = ""+wholeSettingLine[1];
+	      }} 
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Animated Grass"))
+          {
+		  this.animatedGrass = Boolean.parseBoolean(wholeSettingLine[1]);
+	      }}
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Random Plant Generater"))
+          {
+		  this.randomPlantGenerater = Integer.parseInt(wholeSettingLine[1]);
+	      }}
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Plant Texture"))
+          {
+		  this.plantTexture = ""+wholeSettingLine[1];
+	      }} 
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Height Difference"))
+          {
+		  this.heightDifference = Double.parseDouble(wholeSettingLine[1]);
+	      }} 
+		  if(read != null && (line = read.readLine()) != null)
+          {
+		  String[] wholeSettingLine = line.split(":");
+		  if(wholeSettingLine[0].equals("Object Texture"))
+          {
+		  if(wholeSettingLine[1].contains("Ultra High")){this.ObjectTexture=0;}	  
+		  if(wholeSettingLine[1].contains("High")){this.ObjectTexture=1;}	  
+		  if(wholeSettingLine[1].contains("Normal")){this.ObjectTexture=2;}	  
+		  if(wholeSettingLine[1].contains("Low")){this.ObjectTexture=3;}	  
+	      }} 
+		  read.close();
+    	  }catch(IOException e) {e.printStackTrace();}
+    	  }
+    }
+    public static int ObjectTexture;
+    
+    /**
+     * Draws the screen and all the components.
+     */
+    public void drawScreen(int p_73863_1_, int p_73863_2_, float p_73863_3_)
+    {
+        this.drawDefaultBackground();
+        if(!this.optionGui)
+    	{
+        this.drawCenteredString(this.fontRendererObj, "In-Game Menu", this.width / 2, 40, 16777215);
+    	}
+        else
+        {
+        this.drawCenteredString(this.fontRendererObj, "Options", this.width / 2, 40, 16777215);	
+        }
+        if(TheStructureWorldServer.getServer().returnToMenu)
+        {
+        TheStructureWorld.TheStructureWorld.displayGuiScreen(new MainMenuGui()); 
+        TheStructureWorldServer.getServer().returnToMenu = false;
+        }
+        super.drawScreen(p_73863_1_, p_73863_2_, p_73863_3_);
+    }
+    
+    
+ 
+    
+}

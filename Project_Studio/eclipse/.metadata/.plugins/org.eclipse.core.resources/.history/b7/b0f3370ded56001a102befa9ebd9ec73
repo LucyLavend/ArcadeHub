@@ -1,0 +1,38 @@
+package nl.miystengine.client.renderer.texture;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import javax.imageio.ImageIO;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.opengl.GL11;
+
+public class SimpleTexture implements ITextureObject
+{
+
+    protected  String textureLocation2;
+ 
+    protected int glTextureId = -1;
+    
+    public SimpleTexture(String s2)
+    {
+    	super();
+        this.textureLocation2 = s2;
+    }
+
+	public int getGlTextureId()
+    {
+        if (this.glTextureId == -1)
+        {
+            this.glTextureId = GL11.glGenTextures();
+        }
+
+        return this.glTextureId;
+    }
+
+    
+
+}

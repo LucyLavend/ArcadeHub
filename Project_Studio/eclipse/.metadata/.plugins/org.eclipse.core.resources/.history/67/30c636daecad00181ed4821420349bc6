@@ -1,0 +1,2003 @@
+package nl.thestructureworld.client;
+
+import io.netty.util.concurrent.GenericFutureListener;
+
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.color.ColorSpace;
+import java.awt.image.BufferedImage;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
+import java.awt.image.DataBuffer;
+import java.awt.image.DataBufferByte;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.Proxy;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Queue;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+
+import javax.imageio.ImageIO;
+
+import nl.thestructureworld.account.MouseControl;
+import nl.thestructureworld.client.audio.MusicTicker;
+import nl.thestructureworld.client.audio.SoundHandler;
+import nl.thestructureworld.client.gui.FontRenderer;
+import nl.thestructureworld.client.gui.GameOverGui;
+import nl.thestructureworld.client.gui.IngameGui;
+import nl.thestructureworld.client.gui.GuiInventory;
+import nl.thestructureworld.client.gui.IngameMenuAndOptionsGui;
+import nl.thestructureworld.client.gui.MainMenuGui;
+import nl.thestructureworld.client.gui.GuiScreen;
+import nl.thestructureworld.client.gui.ScaledResolution;
+import nl.thestructureworld.client.multiplayer.GuiConnecting;
+import nl.thestructureworld.client.multiplayer.NetHandlerLoginClient;
+import nl.thestructureworld.client.multiplayer.NetHandlerPlayClient;
+import nl.thestructureworld.client.multiplayer.PlayerControllerMP;
+import nl.thestructureworld.client.multiplayer.ServerData;
+import nl.thestructureworld.client.multiplayer.WorldClient;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.renderer.GLAllocation;
+import nl.thestructureworld.client.renderer.OpenGlHelper;
+import nl.thestructureworld.client.renderer.Tessellator;
+import nl.thestructureworld.client.renderer.entity.ModelBasic;
+import nl.thestructureworld.client.renderer.terrain.MaterialADSS;
+import nl.thestructureworld.client.renderer.terrain.RenderTerrain;
+import nl.thestructureworld.client.renderer.texture.TextureManager;
+import nl.thestructureworld.client.resources.AnimationMetadataSection;
+import nl.thestructureworld.client.resources.AnimationMetadataSectionSerializer;
+import nl.thestructureworld.client.resources.DefaultResourcePack;
+import nl.thestructureworld.client.resources.FontMetadataSection;
+import nl.thestructureworld.client.resources.FontMetadataSectionSerializer;
+import nl.thestructureworld.client.resources.IMetadataSerializer;
+import nl.thestructureworld.client.resources.IReloadableResourceManager;
+import nl.thestructureworld.client.resources.IResourceManager;
+import nl.thestructureworld.client.resources.PackMetadataSection;
+import nl.thestructureworld.client.resources.PackMetadataSectionSerializer;
+import nl.thestructureworld.client.resources.ResourceIndex;
+import nl.thestructureworld.client.resources.SimpleReloadableResourceManager;
+import nl.thestructureworld.client.resources.TextureMetadataSection;
+import nl.thestructureworld.client.resources.TextureMetadataSectionSerializer;
+import nl.thestructureworld.client.shaders.Framebuffer;
+import nl.thestructureworld.client.shaders.Light;
+import nl.thestructureworld.client.shaders.Loader;
+import nl.thestructureworld.client.shaders.StaticShader;
+import nl.thestructureworld.client.shaders.water.WaterShader;
+import nl.thestructureworld.crash.CrashReport;
+import nl.thestructureworld.crash.CrashReportCategory;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityItem;
+import nl.thestructureworld.entity.EntityList;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.entity.player.EntityClientPlayerMP;
+import nl.thestructureworld.entity.player.EntityPlayer;
+import nl.thestructureworld.integrated.IntegratedServer;
+import nl.thestructureworld.item.Item;
+import nl.thestructureworld.item.ItemTerrainObject;
+import nl.thestructureworld.item.ItemData;
+import nl.thestructureworld.item.Items;
+import nl.thestructureworld.network.EnumConnectionState;
+import nl.thestructureworld.network.NetworkManager;
+import nl.thestructureworld.network.play.C00PacketLoginStart;
+import nl.thestructureworld.network.play.client.C16PacketClientStatus;
+import nl.thestructureworld.network.play.server.INetHandlerHandshakeServer;
+import nl.thestructureworld.network.play.server.S0EPacketSpawnObject;
+import nl.thestructureworld.terrainandobjects.TerrainObject;
+import nl.thestructureworld.terrainandobjects.Material;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.util.MouseHelper;
+import nl.thestructureworld.util.MovementInputFromOptions;
+import nl.thestructureworld.util.MovingObjectPosition;
+import nl.thestructureworld.util.ReportedException;
+import nl.thestructureworld.util.ResourceLocation;
+import nl.thestructureworld.util.Session;
+import nl.thestructureworld.util.Timer;
+import nl.thestructureworld.util.Util;
+import nl.thestructureworld.world.WorldSettings;
+import nl.thestructureworld.world.area.AnvilSaveConverter;
+import nl.thestructureworld.world.storage.ISaveFormat;
+import nl.thestructureworld.world.storage.ISaveHandler;
+import nl.thestructureworld.world.storage.StructureWorldInfo;
+
+import org.apache.commons.lang3.Validate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.LWJGLException;
+import org.lwjgl.Sys;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.DisplayMode;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.OpenGLException;
+import org.lwjgl.opengl.PixelFormat;
+import org.lwjgl.util.glu.GLU;
+import org.lwjgl.util.vector.Vector3f;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Queues;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableFutureTask;
+
+public class TheStructureWorld implements Runnable
+{
+	public static String acceptedSymbols = " !@#$%&*()\'+,-./1234567890:;<=>?\"ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+	
+	/** The RenderEngine instance*/
+    public TextureManager renderEngine;
+    public static final Logger logger = LogManager.getLogger();
+    public static final boolean isRunningonMac = Util.getOSType() == Util.EnumOS.OSX;
+    public static byte[] memoryReserve = new byte[10485760];
+    public static final List macDisplayModes = Lists.newArrayList(new DisplayMode[] {new DisplayMode(2560, 1600), new DisplayMode(2880, 1800)});
+    public final Multimap field_152356_J;
+    public ServerData currentServerData;
+  
+    public int canOpenAgain = 0;
+    //Tapejara
+    //https://www.youtube.com/watch?v=ZAS5b1UrIMI&t=1s compy sound
+    public static TheStructureWorld TheStructureWorld;
+    
+    public boolean fullscreen;
+    public PlayerControllerMP playerController;
+
+    /** Instance of CrashReport. */
+    public CrashReport crashReporter;
+    public boolean hasCrashed;
+    public int displayWidth;
+    public int displayHeight;
+    public Timer timer = new Timer(20.0F);
+    public static WorldClient theWorld;
+    public EntityClientPlayerMP thePlayer;
+    public EntityLivingBase renderViewEntity;
+    public Entity pointedEntity;
+    private final Session session;
+    public boolean isGamePaused;
+    public boolean isTimePaused;
+
+    /** The font renderer used for displaying and measuring text. */
+    public FontRenderer fontRenderer;
+
+    /** The GuiScreen that's being displayed at the moment. */
+    public GuiScreen currentScreen;
+    public static EntityRenderer entityRenderer;
+
+    /** Mouse left click counter */
+    private int leftclickCounter;
+
+    /** Display width */
+    private int tempDisplayWidth;
+
+    /** Display height */
+    private int tempDisplayHeight;
+
+    /** Instance of IntegratedServer. */
+    private IntegratedServer theIntegratedServer;
+
+    public IngameGui ingameGUI;
+
+    /** Skip render world */
+    public boolean skipRenderWorld;
+
+    /** The ray trace hit that the mouse is over. */
+    public MovingObjectPosition objectMouseOver;
+
+    /** The game settings that currently hold effect. */
+    public GameSettings gameSettings;
+
+    /** Mouse helper instance. */
+    public MouseHelper mouseHelper;
+    public final File location;
+    private final File fileAssets;
+    private final String launchedVersion;
+    private final Proxy proxy;
+    private ISaveFormat saveLoader;
+
+    /**
+     * This is set to fpsCounter every debug screen update, and is shown on the debug screen. It's also sent as part of
+     * the usage snooping.
+     */
+    public static int debugFPS;
+
+    /**
+     * When you place a TerrainObject, it's set to 6, decremented once per tick, when it's 0, you can place another TerrainObject.
+     */
+    private int rightClickDelayTimer;
+    private boolean refreshTexturePacksScheduled;
+    private String serverName;
+    private int serverPort;
+
+    /**
+     * Does the actual gameplay have focus. If so then mouse and keys will effect the player instead of menus.
+     */
+    public boolean inGameHasFocus;
+    long systemTime = getSystemTime();
+
+    /** Join player counter */
+    private int joinPlayerCounter;
+    private final boolean jvm64bit;
+    private NetworkManager myNetworkManager;
+    private boolean integratedServerIsRunning;
+    private IReloadableResourceManager resourceManager;
+    private List defaultResourcePacks = Lists.newArrayList();
+    public Framebuffer framebuffer;
+    private SoundHandler SoundHandler;
+    private MusicTicker mcMusicTicker;
+   
+    /**
+     * Set to true to keep the game loop running. Set to false by shutdown() to allow the game loop to exit cleanly.
+     */
+    volatile boolean running = true;
+
+    /** String that shows the debug information */
+    public String debug = "";
+
+    /** Approximate time (in ms) of last update to debug string */
+    long debugUpdateTime = getSystemTime();
+
+    /** holds the current fps */
+    public int fpsCounter;
+    long prevFrameTime = -1L;
+
+    public TheStructureWorld(Session p_i1103_1_,  boolean isFullScreen,   Proxy proxy,  Multimap p_i1103_11_, String p_i1103_12_)
+    {
+    	TheStructureWorld = this;
+    	this.location = new File(FileBasicJava.source+"/The Structure World");
+        this.fileAssets = this.location;
+        this.launchedVersion = FileBasicJava.version;
+        this.field_152356_J = p_i1103_11_;
+        this.proxy = proxy == null ? Proxy.NO_PROXY : proxy;
+        this.startTimerHackThread();
+        this.session = p_i1103_1_;
+        logger.info("Setting user: " + p_i1103_1_.getUsername());
+        logger.info("(Session ID is " + p_i1103_1_.getSessionID() + ")");
+        this.displayWidth = 854;
+        this.displayHeight = 480;
+        this.tempDisplayWidth = 854;
+        this.tempDisplayHeight = 480;
+        this.fullscreen = isFullScreen;
+        this.jvm64bit = isJvm64bit();
+        ImageIO.setUseCache(false);
+        TerrainObject.registerBasicEntityRender();
+        Item.registerItems();
+      }
+
+    private static boolean isJvm64bit()
+    {
+        String[] var0 = new String[] {"sun.arch.data.model", "com.ibm.vm.bitmode", "os.arch"};
+        String[] var1 = var0;
+        int var2 = var0.length;
+
+        for (int var3 = 0; var3 < var2; ++var3)
+        {
+            String var4 = var1[var3];
+            String var5 = System.getProperty(var4);
+
+            if (var5 != null && var5.contains("64"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    
+    public static Object EntityList(int id,int type,Entity entityforpackage)
+    {
+    	if(id == 1)
+    	{
+    		if(type == 0)
+    		{
+    			return new EntityItem(theWorld);
+    		}
+    		else if(type == 2)
+    		{
+    			return "Item";
+    		}
+    		else if(type == 3)
+    		{
+    			return 64;
+    		}
+    		else if(type == 4)
+    		{
+    			return 20;
+    		}
+    		else if(type == 5)
+    		{
+    			return true;
+    		}
+    		else return new S0EPacketSpawnObject(entityforpackage, 2, 1); 
+    	}
+    	else return null;
+    }
+
+
+    public Framebuffer getFramebuffer()
+    {
+        return this.framebuffer;
+    }
+
+    private void startTimerHackThread()
+    {
+        Thread var1 = new Thread("Timer hack thread")
+        {
+            public void run()
+            {
+                while (TheStructureWorld.this.running)
+                {
+                    try
+                    {
+                        Thread.sleep(2147483647L);
+                    }
+                    catch (InterruptedException var2)
+                    {
+                        ;
+                    }
+                }
+            }
+        };
+        var1.setDaemon(true);
+        var1.start();
+    }
+
+    public void crashed(CrashReport p_71404_1_)
+    {
+        this.hasCrashed = true;
+        this.crashReporter = p_71404_1_;
+    }
+    /**
+     * Wrapper around displayCrashReportInternal
+     */
+    public void displayCrashReport(CrashReport p_71377_1_)
+    {
+        File var2 = new File(getTheStructureWorld().location, "crash-reports");
+        File var3 = new File(var2, "crash-" + (new SimpleDateFormat("yyyy-MM-dd_HH.mm.ss")).format(new Date()) + "-client.txt");
+        System.out.println(p_71377_1_.getCompleteReport());
+
+        if (p_71377_1_.getFile() != null)
+        {
+            System.out.println("Game crashed! Crash report saved to:  " + p_71377_1_.getFile());
+            System.exit(-1);
+        }
+        else if (p_71377_1_.saveToFile(var3))
+        {
+            System.out.println("Game crashed! Crash report saved to:  " + var3.getAbsolutePath());
+            System.exit(-1);
+        }
+        else
+        {
+            System.out.println("Game crashed! Crash report could not be saved. ");
+            System.exit(-2);
+        }
+    }
+
+    public void setServer(String p_71367_1_, int p_71367_2_)
+    {
+        this.serverName = p_71367_1_;
+        this.serverPort = p_71367_2_;
+    }
+
+    public static Random rand = new Random();   
+    public static ByteBuffer IIcon;
+
+
+    
+    public static int ByteBufferWidth(String s) throws IOException 
+    { 
+    	BufferedImage Icon = ImageIO.read(new File(s));
+        return  Icon.getWidth();
+    } 
+    
+    public static int ByteBufferHeight(String s) throws IOException 
+    { 
+    	BufferedImage Icon = ImageIO.read(new File(s));
+        return  Icon.getHeight();
+    }
+    
+    public static void setIcon() throws IOException 
+    {
+    	  int icon  = rand.nextInt(4);
+    	  String logo = "";
+          if(icon == 1)
+          {
+          	 logo =	FileBasicJava.source+"/The Structure World/The Structure World Logo green.png";
+          }
+          if(icon == 2)
+          {
+          	 logo =	FileBasicJava.source+"/The Structure World/The Structure World Logo blue.png";
+          }
+          if(icon == 3)
+          {
+          	 logo =	FileBasicJava.source+"/The Structure World/The Structure World Logo purple.png";
+          }
+          if(icon == 4)
+          {
+          	 logo =	FileBasicJava.source+"/The Structure World/The Structure World Logo red.png";
+          }
+          if(logo == "")
+          {
+          	logo =	FileBasicJava.source+"/The Structure World/The Structure World Logo orange.png";
+          }
+          IIcon = TheStructureWorld.TheStructureWorld.getTextureManager().convertImageData(logo);
+          Display.setIcon(new ByteBuffer[] {IIcon,IIcon});  
+    }
+    
+    public static String Location = "The Structure World/Display.txt";
+    public static int DepthBits = 24;
+    public static int Samples = 8;
+    
+    /**
+     * Starts the game.
+     */
+    private void startGame() throws LWJGLException, IOException, InterruptedException
+    {
+        this.gameSettings = new GameSettings(this);
+        try
+        {
+		@SuppressWarnings("resource")
+		BufferedReader read = new BufferedReader(new FileReader(new File(FileBasicJava.source,Location)));
+		String line = "";	
+		if(read != null && (line = read.readLine()) != null)
+        {
+		String[] wholeSettingLine = line.split(":");
+		if(wholeSettingLine[0].equals("WindowWidth"))
+        {
+		this.displayWidth = Integer.parseInt(wholeSettingLine[1]);
+		this.tempDisplayWidth = Integer.parseInt(wholeSettingLine[1]);
+		}} 
+		if(read != null && (line = read.readLine()) != null)
+        {
+		String[] wholeSettingLine = line.split(":");
+		if(wholeSettingLine[0].equals("WindowHeight"))
+        {
+		this.displayHeight = Integer.parseInt(wholeSettingLine[1]);
+		this.tempDisplayHeight = Integer.parseInt(wholeSettingLine[1]);
+		}} 
+	    if(read != null && (line = read.readLine()) != null)
+        {
+		String[] wholeSettingLine = line.split(":");
+		if(wholeSettingLine[0].equals("DepthBits"))
+        {
+		DepthBits = Integer.parseInt(wholeSettingLine[1]);
+		}} 
+	    if(read != null && (line = read.readLine()) != null)
+        {
+		String[] wholeSettingLine = line.split(":");
+		if(wholeSettingLine[0].equals("Samples"))
+        {
+		Samples = Integer.parseInt(wholeSettingLine[1]);
+		}}}
+        catch(Exception ex)
+        {
+        ex.printStackTrace();
+        System.out.println("Couldn't load Display settings: "+Location);
+        System.out.println("Game will close now....");	
+        TheStructureWorld.TheStructureWorld.shutdownApplet();
+        }
+        if (this.fullscreen)
+        {
+            Display.setFullscreen(true);
+        }
+        else
+        {
+            Display.setDisplayMode(new DisplayMode(this.displayWidth, this.displayHeight));
+        }
+        Display.setResizable(true);
+        Display.setTitle("The Structure World    Version: Inprog V0.0.1    Created by: Lucef");
+        logger.info("LWJGL Version: " + Sys.getVersion());
+        this.setIcon();
+        try
+        {
+        Display.create((new PixelFormat()).withDepthBits(DepthBits).withSamples(Samples));
+        }
+        catch (LWJGLException ex)
+        {
+            System.out.println("Couldn't set pixel format: "+ ex);
+            try
+            {
+                Thread.sleep(1000L);
+            }
+            catch (InterruptedException var6){;}
+            if (this.fullscreen)
+            {
+                this.updateDisplayMode();
+            }
+            Display.create();
+        }
+        OpenGlHelper.initializeTextures();
+        IngameMenuAndOptionsGui options = new IngameMenuAndOptionsGui();
+        options.loadorwriteOptions(true); 
+        this.framebuffer = new Framebuffer(this.displayWidth, this.displayHeight, true, -1);
+        this.framebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
+        this.saveLoader = new AnvilSaveConverter(new File(this.location, "saves"));
+        this.entityRenderer = new EntityRenderer(this);
+        MouseControl.render = this.entityRenderer;
+        this.renderEngine = new TextureManager();
+        this.SoundHandler = new SoundHandler(null, this.gameSettings);
+        this.mcMusicTicker = new MusicTicker(this);
+        this.fontRenderer = new FontRenderer(acceptedSymbols);
+        this.mouseHelper = new MouseHelper();
+        GL11.glDepthFunc(GL11.GL_LEQUAL);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL13.GL_MULTISAMPLE);
+        FileBasicJava.checkGLError("Startup");
+        GL11.glViewport(0, 0, this.displayWidth, this.displayHeight);
+        FileBasicJava.checkGLError("Post startup");
+        this.ingameGUI = new IngameGui(this);
+        if (this.serverName != null)
+        {
+        	  this.displayGuiScreen(new GuiConnecting(new MainMenuGui(), this, this.serverName, this.serverPort));
+        }
+        else
+        {
+            this.displayGuiScreen(new MainMenuGui());
+        }
+     
+        if (this.gameSettings.fullScreen && !this.fullscreen)
+        {
+            this.toggleFullscreen();
+        }
+   }
+  
+
+    private void updateDisplayMode() throws LWJGLException
+    {
+        HashSet var1 = new HashSet();
+        Collections.addAll(var1, Display.getAvailableDisplayModes());
+        DisplayMode var2 = Display.getDesktopDisplayMode();
+        if (!var1.contains(var2) && Util.getOSType() == Util.EnumOS.OSX)
+        {
+            Iterator var3 = macDisplayModes.iterator();
+            while (var3.hasNext())
+            {
+                DisplayMode var4 = (DisplayMode)var3.next();
+                boolean var5 = true;
+                Iterator var6 = var1.iterator();
+                DisplayMode var7;
+                while (var6.hasNext())
+                {
+                    var7 = (DisplayMode)var6.next();
+
+                    if (var7.getBitsPerPixel() == 32 && var7.getWidth() == var4.getWidth() && var7.getHeight() == var4.getHeight())
+                    {
+                        var5 = false;
+                        break;
+                    }
+                }
+                if (!var5)
+                {
+                    var6 = var1.iterator();
+                    while (var6.hasNext())
+                    {
+                        var7 = (DisplayMode)var6.next();
+                        if (var7.getBitsPerPixel() == 32 && var7.getWidth() == var4.getWidth() / 2 && var7.getHeight() == var4.getHeight() / 2)
+                        {
+                            var2 = var7;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        Display.setDisplayMode(var2);
+        this.displayWidth = var2.getWidth();
+        this.displayHeight = var2.getHeight();
+    }
+    
+
+    /**
+     * Returns the save loader that is currently being used
+     */
+    public ISaveFormat getSaveLoader()
+    {
+        return this.saveLoader;
+    }
+    
+    private boolean screenLock = false;
+    private GuiScreen screenInQueue;
+    
+    public void setScreenLock(boolean lock)
+    {
+    	this.screenLock = lock;
+    	if(!lock && this.screenInQueue != null)
+    	{
+    	this.currentScreen = this.screenInQueue;
+    	this.screenInQueue = null;
+    	}
+    }
+
+    /**
+     * Sets the argument GuiScreen as the main (topmost visible) screen.
+     */
+    public void displayGuiScreen(GuiScreen screen)
+    {
+    	if(!this.screenLock)
+    	{
+        if(this.currentScreen != null)
+        {
+            this.currentScreen.onGuiClosed();
+        }
+
+        if(screen == null && this.theWorld == null)
+        {
+        	screen = new MainMenuGui();
+        }
+        else if(screen == null && this.thePlayer.getHealth() <= 0.0F)
+        {
+        	screen = new GameOverGui();
+        }
+
+        if(screen instanceof MainMenuGui)
+        {
+            this.gameSettings.showDebugInfo = false;
+        }
+
+        this.currentScreen = (GuiScreen)screen;
+
+        if (screen != null)
+        {
+            this.setIngameNotInFocus();
+            ScaledResolution var2 = new ScaledResolution(this, this.displayWidth, this.displayHeight);
+            int var3 = var2.getScaledWidth();
+            int var4 = var2.getScaledHeight();
+            ((GuiScreen)screen).setWorldAndResolution(this, var3, var4);
+            this.skipRenderWorld = false;
+        }
+        else
+        {
+            this.SoundHandler.func_147687_e();
+            this.setIngameFocus();
+        }}
+    	else
+    	{
+    	this.screenInQueue = screen;	
+    	}
+    }
+
+    public void shutdownApplet()
+    {
+        try
+        {
+           logger.info("Stopping!");
+            try
+            {
+                this.loadWorld((WorldClient)null);
+            }
+            catch (Throwable var7)
+            {
+                ;
+            }
+            try
+            {
+                GLAllocation.deleteTexturesAndDisplayLists();
+            }
+            catch (Throwable var6)
+            {
+                ;
+            }
+            this.SoundHandler.func_147685_d();
+        }
+        finally
+        {
+        	for(int id=0;id<TextureManager.TestObject.size();++id)
+        	{
+        	 try
+             {
+        		 GL11.glDeleteTextures(id);
+        		 System.out.println("Delete Texture with ID: "+id);
+             }
+             catch (Throwable var6)
+             {
+            	 var6.printStackTrace();
+            	 System.out.println("Texture is already gone or there is a bug in the Texture Register List?");
+            	 System.out.println("Report to the author please....");
+             }
+        	}
+        	System.out.println("#Game closed#");
+            Display.destroy();
+            if (!this.hasCrashed)
+            {
+                System.exit(0);
+            }
+        }
+        System.gc();
+    }
+
+    public void run()
+    {
+        this.running = true;
+        CrashReport var2;
+        try
+        {
+            this.startGame();
+        }
+        catch (Throwable var11)
+        {
+            var2 = CrashReport.makeCrashReport(var11, "Initializing game");
+            var2.makeCategory("Initialization");
+            this.displayCrashReport(this.addGraphicsAndWorldToCrashReport(var2));
+            return;
+        }
+        while (true)
+        {
+            try
+            {
+                while (this.running)
+                {
+                    if (!this.hasCrashed || this.crashReporter == null)
+                    {
+                        try
+                        {
+                            this.runGameLoop();
+                        }
+                        catch (OutOfMemoryError var10)
+                        {
+                            this.freeMemory();
+                            
+                            System.gc();
+                        }
+                        continue;
+                    }
+                    this.displayCrashReport(this.crashReporter);
+                    return;
+                }
+            }
+            catch (Error var12)
+            {
+            	var12.printStackTrace();
+            }
+            catch (ReportedException var13)
+            {
+                this.addGraphicsAndWorldToCrashReport(var13.getCrashReport());
+                this.freeMemory();
+                logger.fatal("Reported exception thrown!", var13);
+                this.displayCrashReport(var13.getCrashReport());
+            }
+            catch (Throwable var14)
+            {
+                var2 = this.addGraphicsAndWorldToCrashReport(new CrashReport("Unexpected error", var14));
+                this.freeMemory();
+                logger.fatal("Unreported exception thrown!", var14);
+                this.displayCrashReport(var2);
+            }
+            finally
+            {
+            	 this.shutdownApplet();
+            }
+
+            return;
+        }
+    }
+    
+    private void freeMemory() 
+    {
+
+	}
+
+	public int lowFPSwarning = 0;
+
+    /**
+     * Called repeatedly from run()
+     */
+    private void runGameLoop()
+    {
+        if((Display.isCreated() && Display.isCloseRequested()) || this.lowFPSwarning > 100)
+        {
+            this.shutdown();
+        }
+        if(this.fpsCounter < 10)
+        {
+        this.lowFPSwarning += 1;	
+        }
+        else
+        {
+        this.lowFPSwarning = 0;		
+        }
+        if(this.currentScreen!=null && this.currentScreen.doesGuiPauseGame())
+        {
+        this.isTimePaused = true;
+        }
+        else if(this.isTimePaused)
+        {
+        this.isTimePaused = false;
+        }       
+        if((this.isGamePaused || this.isTimePaused )&& this.theWorld != null)
+        {
+            float var1 = this.timer.renderPartialTicks;
+            this.timer.updateTimer();
+            this.timer.renderPartialTicks = var1;
+        }
+        else
+        {
+            this.timer.updateTimer();
+        }
+        MouseControl.checkMouseWheel();
+        long var5 = System.nanoTime();
+        for (int var3 = 0; var3 < this.timer.elapsedTicks; ++var3)
+        {
+            this.runTick();
+        }
+        long var6 = System.nanoTime() - var5;
+        FileBasicJava.checkGLError("Pre render");
+        this.SoundHandler.func_147691_a(this.thePlayer, this.timer.renderPartialTicks);
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        if (!this.skipRenderWorld)
+        {
+            this.entityRenderer.updateCameraAndRender(this.timer.renderPartialTicks);
+        }
+        GL11.glFlush();
+        if (!Display.isActive() && this.fullscreen)
+        {
+            this.toggleFullscreen();
+        }
+        this.prevFrameTime = System.nanoTime(); 
+        this.framebuffer.unbindFramebuffer();
+        this.framebuffer.framebufferRender(0,0,this.displayWidth,this.displayHeight,-1);
+        GL11.glPushMatrix();
+        this.entityRenderer.setupOverlayRendering();
+        GL11.glPopMatrix();
+        this.wasResized();
+        Thread.yield();
+        FileBasicJava.checkGLError("Post render");
+        ++this.fpsCounter;
+        while (getSystemTime() >= this.debugUpdateTime + 1000L)
+        {
+            debugFPS = this.fpsCounter;
+            this.debug = debugFPS + " fps, ";
+            this.debugUpdateTime += 1000L;
+            this.fpsCounter = 0;
+        }
+    }
+
+    public void wasResized()
+    {
+        Display.update();
+
+        if (!this.fullscreen && Display.wasResized())
+        {
+            int var1 = this.displayWidth;
+            int var2 = this.displayHeight;
+            this.displayWidth = Display.getWidth();
+            this.displayHeight = Display.getHeight();
+
+            if (this.displayWidth != var1 || this.displayHeight != var2)
+            {
+                if (this.displayWidth <= 0)
+                {
+                    this.displayWidth = 1;
+                }
+
+                if (this.displayHeight <= 0)
+                {
+                    this.displayHeight = 1;
+                }
+
+                this.resize(this.displayWidth, this.displayHeight);
+            }
+        }
+    }
+
+    
+    /**
+     * Called when the window is closing. Sets 'running' to false which allows the game loop to exit cleanly.
+     */
+    public void shutdown()
+    {
+        this.running = false;
+        if(EntityRenderer.nmr != null)
+        {
+        EntityRenderer.shaderW.cleanUp();
+        EntityRenderer.nmr.cleanUp();
+        }
+    }
+   
+    public void setIngameFocus()
+    {
+        if (Display.isActive())
+        {
+            if (!this.inGameHasFocus)
+            {
+                this.inGameHasFocus = true;
+                this.mouseHelper.grabMouseCursor();
+                this.displayGuiScreen((GuiScreen)null);
+                this.leftclickCounter = 10000;
+            }
+        }
+    }
+
+    /**
+     * Resets the player keystate, disables the ingame focus, and ungrabs the mouse cursor.
+     */
+    public void setIngameNotInFocus()
+    {
+        if (this.inGameHasFocus)
+        {
+            KeyBinding.unPressAllKeys();
+            this.inGameHasFocus = false;
+            this.mouseHelper.ungrabMouseCursor();
+        }
+    }
+
+    /**
+     * Displays the ingame menu
+     */
+    public void displayInGameMenu()
+    {
+        if (this.currentScreen == null)
+        {
+            this.displayGuiScreen(new IngameMenuAndOptionsGui());
+
+            if (this.isSingleplayer() && !this.theIntegratedServer.getPublic())
+            {
+                this.SoundHandler.func_147689_b();
+            }
+        }
+    }
+
+    private void damageTerrain(boolean b)
+    {
+        if (!b)
+        {
+            this.leftclickCounter = 0;
+        }
+
+        if (this.leftclickCounter <= 0)
+        {
+            if (b && this.objectMouseOver != null && this.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.TerrainObject)
+            {
+                int var2 = this.objectMouseOver.TerrainObjectX;
+                int var3 = this.objectMouseOver.TerrainObjectY;
+                int var4 = this.objectMouseOver.TerrainObjectZ;
+
+                if (this.theWorld.getTerrainObject(var2, var3, var4).getMaterial() != Material.air)
+                {
+                    this.playerController.onPlayerDamageTerrainObject(var2, var3, var4, this.objectMouseOver.sideHit);
+
+                    if (this.thePlayer.isCurrentToolAdventureModeExempt(var2, var3, var4))
+                    {
+                        this.thePlayer.swingItem();
+                    }
+                }
+            }
+            else
+            {
+                this.playerController.resetTerrainObjectRemoving();
+            }
+        }
+    }
+
+    private void editTerrainorEntity()
+    {
+        if (this.leftclickCounter <= 0)
+        {
+            this.thePlayer.swingItem();
+            if (this.objectMouseOver == null)
+            {
+                logger.error("Null returned as \'hitResult\', this shouldn\'t happen!");
+
+                if (this.playerController.isForgeMode())
+                {
+                    this.leftclickCounter = 10;
+                }
+            }
+            else
+            {
+                switch (SwitchMovingObjectType.i[this.objectMouseOver.typeOfHit.ordinal()])
+                {
+                    case 1:
+                        this.playerController.attackEntity(this.thePlayer, this.objectMouseOver.entityHit);
+                        break;
+
+                    case 2:
+                        int var1 = this.objectMouseOver.TerrainObjectX;
+                        int var2 = this.objectMouseOver.TerrainObjectY;
+                        int var3 = this.objectMouseOver.TerrainObjectZ;
+
+                        if (this.theWorld.getTerrainObject(var1, var2, var3).getMaterial() == Material.air)
+                        {
+                            if (this.playerController.isForgeMode())
+                            {
+                                this.leftclickCounter = 10;
+                            }
+                        }
+                        else
+                        {
+                            this.playerController.clickTerrainObject(var1, var2, var3, this.objectMouseOver.sideHit);
+                        }
+                }
+            }
+        }
+    }
+
+    private void func_147121_ag()
+    {
+        this.rightClickDelayTimer = 4;
+        boolean var1 = true;
+        ItemData var2 = this.thePlayer.inventory.getCurrentItem();
+
+        if (this.objectMouseOver == null)
+        {
+            logger.warn("Null returned as \'hitResult\', this shouldn\'t happen!");
+        }
+        else
+        {
+            switch (SwitchMovingObjectType.i[this.objectMouseOver.typeOfHit.ordinal()])
+            {
+                case 1:
+                    if (this.playerController.interactWithEntitySendPacket(this.thePlayer, this.objectMouseOver.entityHit))
+                    {
+                        var1 = false;
+                    }
+
+                    break;
+
+                case 2:
+                    int var3 = this.objectMouseOver.TerrainObjectX;
+                    int var4 = this.objectMouseOver.TerrainObjectY;
+                    int var5 = this.objectMouseOver.TerrainObjectZ;
+
+                    if (this.theWorld.getTerrainObject(var3, var4, var5).getMaterial() != Material.air)
+                    {
+                        int var6 = var2 != null ? var2.stackSize : 0;
+
+                        if (this.playerController.onPlayerRightClick(this.thePlayer, this.theWorld, var2, var3, var4, var5, this.objectMouseOver.sideHit, this.objectMouseOver.hitVec))
+                        {
+                            var1 = false;
+                            this.thePlayer.swingItem();
+                        }
+
+                        if (var2 == null)
+                        {
+                            return;
+                        }
+
+                        if (var2.stackSize == 0)
+                        {
+                            this.thePlayer.inventory.mainInventory[this.thePlayer.inventory.currentItem] = null;
+                        }
+                        else if (var2.stackSize != var6 || this.playerController.isInForgeMode())
+                        {
+                           
+                        }
+                    }
+            }
+        }
+
+        if (var1)
+        {
+            ItemData var7 = this.thePlayer.inventory.getCurrentItem();
+        }
+    }
+
+    /**
+     * Toggles fullscreen mode.
+     */
+    public void toggleFullscreen()
+    {
+        try
+        {
+            this.fullscreen = !this.fullscreen;
+
+            if (this.fullscreen)
+            {
+                this.updateDisplayMode();
+                this.displayWidth = Display.getDisplayMode().getWidth();
+                this.displayHeight = Display.getDisplayMode().getHeight();
+
+                if (this.displayWidth <= 0)
+                {
+                    this.displayWidth = 1;
+                }
+                if (this.displayHeight <= 0)
+                {
+                    this.displayHeight = 1;
+                }
+            }
+            else
+            {
+                Display.setDisplayMode(new DisplayMode(this.tempDisplayWidth, this.tempDisplayHeight));
+                this.displayWidth = this.tempDisplayWidth;
+                this.displayHeight = this.tempDisplayHeight;
+
+                if (this.displayWidth <= 0)
+                {
+                    this.displayWidth = 1;
+                }
+
+                if (this.displayHeight <= 0)
+                {
+                    this.displayHeight = 1;
+                }
+            }
+            if (this.currentScreen != null)
+            {
+                this.resize(this.displayWidth, this.displayHeight);
+            }
+            else
+            {
+                this.updateFramebufferSize();
+            }
+            Display.setFullscreen(this.fullscreen);
+            this.wasResized();
+        }
+        catch (Exception var2)
+        {
+            logger.error("Couldn\'t toggle fullscreen", var2);
+        }
+    }
+
+    /**
+     * Called to resize the current screen.
+     */
+    private void resize(int x, int y)
+    {
+        this.displayWidth = x <= 0 ? 1 : x;
+        this.displayHeight = y <= 0 ? 1 : y;
+        if (this.currentScreen != null)
+        {
+            ScaledResolution sr = new ScaledResolution(this,x, y);
+            this.currentScreen.setWorldAndResolution(this, sr.getScaledWidth(), sr.getScaledHeight());
+        }
+         this.updateFramebufferSize();
+    }
+
+    private void updateFramebufferSize()
+    {
+        this.framebuffer.createBindFramebuffer(this.displayWidth, this.displayHeight, -1);
+    }
+    
+    public int canEditTerrain = 0;
+
+    /**
+     * Runs the current tick.
+     */
+    public void runTick()
+    {
+               
+        if(!this.isTimePaused && !this.isGamePaused &&this.theWorld != null)
+        {
+        this.theWorld.updateEntities(false);
+        }
+        else if(this.theWorld != null)
+        {
+        this.theWorld.updateEntities(true);
+        }
+        if (this.rightClickDelayTimer > 0)
+        {
+            --this.rightClickDelayTimer;
+        }
+        if (!this.isGamePaused)
+        {
+            this.ingameGUI.updateTick();
+        }
+        this.entityRenderer.getMouseOver(1.0F);        
+        if (this.theWorld != null)
+        {
+            this.playerController.updateController();
+        }
+
+        if (!this.isGamePaused)
+        {
+            this.renderEngine.tick();
+        }
+        
+
+        if (this.currentScreen == null && this.thePlayer != null)
+        {
+            if (this.thePlayer.getHealth() <= 0.0F)
+            {
+                this.displayGuiScreen((GuiScreen)null);
+            }
+        }
+
+
+        if (this.currentScreen != null)
+        {
+            this.leftclickCounter = 10000;
+        }
+
+        CrashReport var2;
+        CrashReportCategory var3;
+
+        if (this.currentScreen != null)
+        {
+            try
+            {
+                this.currentScreen.handleInput();
+            }
+            catch (Throwable var6)
+            {
+                var2 = CrashReport.makeCrashReport(var6, "Updating screen events");
+                var3 = var2.makeCategory("Affected screen");
+                var3.addCrashSectionCallable("Screen name", new Callable()
+                {
+                    public String call()
+                    {
+                        return TheStructureWorld.this.currentScreen.getClass().getCanonicalName();
+                    }
+                });
+                throw new ReportedException(var2);
+            }
+
+            if (this.currentScreen != null)
+            {
+                try
+                {
+                    this.currentScreen.updateScreen();
+                }
+                catch (Throwable var5)
+                {
+                    var2 = CrashReport.makeCrashReport(var5, "Ticking screen");
+                    var3 = var2.makeCategory("Affected screen");
+                    var3.addCrashSectionCallable("Screen name", new Callable()
+                    {
+                       public String call()
+                        {
+                            return TheStructureWorld.this.currentScreen.getClass().getCanonicalName();
+                        }
+                    });
+                    throw new ReportedException(var2);
+                }
+            }
+        }
+
+        if (this.currentScreen == null)
+        {
+            int var9;
+
+            while (Mouse.next())
+            {
+                var9 = Mouse.getEventButton();
+                KeyBinding.setKeyBindState(var9 - 100, Mouse.getEventButtonState());
+
+                if (Mouse.getEventButtonState())
+                {
+                    KeyBinding.onTick(var9 - 100);
+                }
+
+                long var11 = getSystemTime() - this.systemTime;
+
+                if (var11 <= 200L)
+                {
+                    int var4 = Mouse.getEventDWheel();
+
+                    if (var4 != 0)
+                    {
+                        this.thePlayer.inventory.changeCurrentItem(var4);
+
+                        if (this.gameSettings.noclip)
+                        {
+                            if (var4 > 0)
+                            {
+                                var4 = 1;
+                            }
+
+                            if (var4 < 0)
+                            {
+                                var4 = -1;
+                            }
+
+                            this.gameSettings.noclipRate += (float)var4 * 0.25F;
+                        }
+                    }
+
+                    if (this.currentScreen == null)
+                    {
+                        if (!this.inGameHasFocus && Mouse.getEventButtonState())
+                        {
+                            this.setIngameFocus();
+                        }
+                    }
+                    else if (this.currentScreen != null)
+                    {
+                        this.currentScreen.handleMouseInput();
+                    }
+                }
+            }
+
+            if (this.leftclickCounter > 0)
+            {
+                --this.leftclickCounter;
+            }
+            boolean var10;
+
+            while (Keyboard.next())
+            {
+                KeyBinding.setKeyBindState(Keyboard.getEventKey(), Keyboard.getEventKeyState());
+
+                if (Keyboard.getEventKeyState())
+                {
+                    KeyBinding.onTick(Keyboard.getEventKey());
+                }
+
+                if (Keyboard.getEventKeyState())
+                {
+                    if (this.currentScreen != null)
+                    {
+                        this.currentScreen.handleKeyboardInput();
+                    }
+                    else
+                    {
+                        if (Keyboard.getEventKey() == 1)
+                        {
+                            this.displayInGameMenu();
+                        }
+
+                        if (Keyboard.getEventKey() == 33 && Keyboard.isKeyDown(61))
+                        {
+                            var10 = Keyboard.isKeyDown(42) | Keyboard.isKeyDown(54);
+                            this.gameSettings.setOptionValue(GameSettings.Options.RENDER_DISTANCE, var10 ? -1 : 1);
+                        }
+
+                        if (Keyboard.getEventKey() == 25 && Keyboard.isKeyDown(61))
+                        {
+                            this.gameSettings.pauseOnLostFocus = !this.gameSettings.pauseOnLostFocus;
+                            this.gameSettings.saveOptions();
+                        }
+                    }
+                }
+            }
+
+            for (var9 = 0; var9 < 9; ++var9)
+            {
+                if (this.gameSettings.keyBindsHotbar[var9].isPressed())
+                {
+                    this.thePlayer.inventory.currentItem = var9;
+                }
+            }
+
+            var10 = this.gameSettings.chatVisibility != EntityPlayer.EnumChatVisibility.HIDDEN;
+            if(this.canOpenAgain>0)
+        	{
+        		--this.canOpenAgain;
+        	}
+            while (this.canOpenAgain==0&&MovementInputFromOptions.canMove&&Keyboard.isKeyDown(KeyAndOtherSettings.OpenInventory))
+            {
+                    this.getNetHandler().addToSendQueue(new C16PacketClientStatus(C16PacketClientStatus.EnumState.OPEN_INVENTORY_ACHIEVEMENT));
+                    this.displayGuiScreen(new GuiInventory(this.thePlayer));this.canOpenAgain=10;
+            }
+
+            while (this.gameSettings.keyBindDrop.isPressed())
+            {
+                this.thePlayer.dropOneItem(GuiScreen.isCtrlKeyDown());
+            }
+
+            if (this.thePlayer != null && this.thePlayer.isUsingItem())
+            {
+                if (!this.gameSettings.keyBindRightClick.getIsKeyPressed())
+                {
+                    this.playerController.onStoppedUsingItem(this.thePlayer);
+                }
+
+                label391:
+
+                while (true)
+                {
+                    if (!this.gameSettings.keyBindLeftClick.isPressed())
+                    {
+                        while (this.gameSettings.keyBindRightClick.isPressed())
+                        {
+                            ;
+                        }
+                        while (true)
+                        {
+                            if (this.gameSettings.keyBindPickTerrainObject.isPressed())
+                            {
+                                continue;
+                            }
+
+                            break label391;
+                        }
+                    }
+                }
+            }
+            else
+            {
+            	while(this.canEditTerrain==0&& this.gameSettings.keyBindLeftClick.isPressed())
+                {
+                    this.editTerrainorEntity();
+                }
+                while (this.gameSettings.keyBindRightClick.isPressed())
+                {
+                    this.func_147121_ag();
+                }
+                while (this.gameSettings.keyBindPickTerrainObject.isPressed())
+                {
+                    this.func_147112_ai();
+                }
+            }
+            if(this.gameSettings.keyBindRightClick.getIsKeyPressed() && this.rightClickDelayTimer == 0 && !this.thePlayer.isUsingItem())
+            {
+                this.func_147121_ag();
+            }
+            if(this.canEditTerrain==0){
+            this.damageTerrain(this.currentScreen == null && this.gameSettings.keyBindLeftClick.getIsKeyPressed() && this.inGameHasFocus);
+            }
+        }
+        if (this.theWorld != null)
+        {
+            if (this.thePlayer != null)
+            {
+                ++this.joinPlayerCounter;
+
+                if (this.joinPlayerCounter == 30)
+                {
+                    this.joinPlayerCounter = 0;
+                    this.theWorld.joinEntityInSurroundings(this.thePlayer);
+                }
+            }
+
+            if (!this.isGamePaused)
+            {
+                this.entityRenderer.updateRenderer();
+            }
+
+            if (!this.isGamePaused)
+            {
+                if (this.theWorld.lastLightningBolt > 0)
+                {
+                    --this.theWorld.lastLightningBolt;
+                }
+             }
+        }
+
+        if (!this.isGamePaused)
+        {
+            this.mcMusicTicker.update();
+            this.SoundHandler.update();
+        }
+
+        if (this.theWorld != null)
+        {
+            if (!this.isGamePaused)
+            {
+                this.theWorld.setAllowedSpawnTypes(this.theWorld.difficultySetting.contains("Peaceful"), true);
+
+                try
+                {
+                    this.theWorld.tick();
+                }
+                catch (Throwable var7)
+                {
+                    var2 = CrashReport.makeCrashReport(var7, "Exception in world tick");
+
+                    if (this.theWorld == null)
+                    {
+                        var3 = var2.makeCategory("Affected level");
+                        var3.addCrashSection("Problem", "Level is null!");
+                    }
+                    else
+                    {
+                        this.theWorld.addStructureWorldInfoToCrashReport(var2);
+                    }
+
+                    throw new ReportedException(var2);
+                }
+            }
+        }
+        else if (this.myNetworkManager != null)
+        {
+            this.myNetworkManager.processReceivedPackets();
+        }
+
+        
+        this.systemTime = getSystemTime();
+    }
+
+    /**
+     * Arguments: World foldername,  World ingame name, WorldSettings
+     */
+    public void launchIntegratedServer(String p_71371_1_, String p_71371_2_, WorldSettings p_71371_3_)
+    {
+        this.loadWorld((WorldClient)null);
+        System.gc();
+        ISaveHandler var4 = this.saveLoader.getSaveLoader(p_71371_1_, false);
+        StructureWorldInfo var5 = var4.loadStructureWorldInfo();
+
+        if (var5 == null && p_71371_3_ != null)
+        {
+            var5 = new StructureWorldInfo(p_71371_3_, p_71371_1_);
+            var4.saveStructureWorldInfo(var5);
+        }
+
+        if (p_71371_3_ == null)
+        {
+            p_71371_3_ = new WorldSettings(var5);
+        }
+
+        try
+        {
+            this.theIntegratedServer = new IntegratedServer(this, p_71371_1_, p_71371_2_, p_71371_3_);
+            this.theIntegratedServer.startServerThread();
+            this.integratedServerIsRunning = true;
+        }
+        catch (Throwable var10)
+        {
+            CrashReport var7 = CrashReport.makeCrashReport(var10, "Starting integrated server");
+            CrashReportCategory var8 = var7.makeCategory("Starting integrated server");
+            var8.addCrashSection("Level ID", p_71371_1_);
+            var8.addCrashSection("Level Name", p_71371_2_);
+            throw new ReportedException(var7);
+        }
+
+        while (!this.theIntegratedServer.serverIsInRunLoop())
+        {
+            String var6 = this.theIntegratedServer.getUserMessage();
+
+            if (var6 != null)
+            {
+            }
+            else
+            {
+            }
+
+            try
+            {
+                Thread.sleep(200L);
+            }
+            catch (InterruptedException var9)
+            {
+                ;
+            }
+        }
+
+        this.displayGuiScreen((GuiScreen)null);
+        SocketAddress var11 = this.theIntegratedServer.func_147137_ag().addLocalEndpoint();
+        NetworkManager var12 = NetworkManager.provideLocalClient(var11);
+        var12.setNetHandler(new NetHandlerLoginClient(var12, this, (GuiScreen)null));
+        var12.scheduleOutboundPacket(new INetHandlerHandshakeServer.C00Handshake(5, var11.toString(), 0, EnumConnectionState.LOGIN), new GenericFutureListener[0]);
+        var12.scheduleOutboundPacket(new C00PacketLoginStart(this.getSession().getProfile()), new GenericFutureListener[0]);
+        this.myNetworkManager = var12;
+    }
+
+    /**
+     * unloads the current world first
+     */
+    public void loadWorld(WorldClient p_71403_1_)
+    {
+        this.loadWorld(p_71403_1_, "");
+    }
+
+    /**
+     * par2Str is displayed on the loading screen to the user unloads the current world first
+     */
+    public void loadWorld(WorldClient p_71353_1_, String p_71353_2_)
+    {
+        if (p_71353_1_ == null)
+        {
+            NetHandlerPlayClient var3 = this.getNetHandler();
+
+            if (var3 != null)
+            {
+                var3.cleanup();
+            }
+
+            if (this.theIntegratedServer != null)
+            {
+                this.theIntegratedServer.initiateShutdown();
+            }
+
+            this.theIntegratedServer = null;
+        }
+
+        this.renderViewEntity = null;
+        this.myNetworkManager = null;
+
+       
+        if (p_71353_1_ == null && this.theWorld != null)
+        {
+            this.setServerData((ServerData)null);
+            this.integratedServerIsRunning = false;
+        }
+
+        this.SoundHandler.func_147690_c();
+        this.theWorld = p_71353_1_;
+
+        if (p_71353_1_ != null)
+        {
+            if (this.entityRenderer != null)
+            {
+                this.entityRenderer.setWorldAndLoadRenderers(p_71353_1_);
+            }
+
+            if (this.thePlayer == null)
+            {
+                this.thePlayer = this.playerController.createNewPlayerMP(p_71353_1_);
+                this.playerController.flipPlayer(this.thePlayer);
+            }
+
+            p_71353_1_.spawnEntityInWorld(this.thePlayer);
+            this.thePlayer.movementInput = new MovementInputFromOptions();
+            this.playerController.setPlayercapAbilities(this.thePlayer);
+            this.renderViewEntity = this.thePlayer;
+        }
+        else
+        {
+            this.saveLoader.flushCache();
+            this.thePlayer = null;
+        }
+
+        System.gc();
+        this.systemTime = 0L;
+    }
+
+
+    /**
+     * Gets the name of the world's current Area provider
+     */
+    public String getWorldProviderName()
+    {
+        return this.theWorld.getProviderName();
+    }
+
+    /**
+     * A String of how many entities are in the world
+     */
+    public String debugInfoEntities()
+    {
+        return ". T: " + this.theWorld.getDebugLoadedEntities();
+    }
+
+    public void setSpawnPlayer(int p_71354_1_)
+    {
+        this.theWorld.setSpawnLocation();
+        this.theWorld.removeAllEntities();
+        int var2 = 0;
+        String var3 = null;
+
+        if (this.thePlayer != null)
+        {
+            var2 = this.thePlayer.getEntityId();
+            this.theWorld.removeEntity(this.thePlayer);
+            var3 = this.thePlayer.getName();
+        }
+
+        this.renderViewEntity = null;
+        this.renderViewEntity = this.thePlayer;
+        this.thePlayer.setName(var3);
+        this.theWorld.spawnEntityInWorld(this.thePlayer);
+        this.playerController.flipPlayer(this.thePlayer);
+        this.thePlayer.movementInput = new MovementInputFromOptions();
+        this.thePlayer.setEntityId(var2);
+        this.playerController.setPlayercapAbilities(this.thePlayer);
+
+        if (this.currentScreen instanceof GameOverGui)
+        {
+            this.displayGuiScreen((GuiScreen)null);
+        }
+    }
+
+    public NetHandlerPlayClient getNetHandler()
+    {
+        return this.thePlayer != null ? this.thePlayer.sendQueue : null;
+    }
+
+    public static boolean isGuiEnabled()
+    {
+        return TheStructureWorld == null || !TheStructureWorld.gameSettings.hideGUI;
+    }
+
+    /**
+     * Returns if ambient occlusion is enabled
+     */
+    public static boolean isAmbientOcclusionEnabled()
+    {
+        return TheStructureWorld != null && TheStructureWorld.gameSettings.ambientOcclusion != 0;
+    }
+
+    private void func_147112_ai()
+    {
+        if (this.objectMouseOver != null)
+        {
+            boolean var1 = this.thePlayer.capAbilities.instaDestroy;
+            int var3 = 0;
+            boolean var4 = false;
+            Item var2;
+            int var5;
+
+            if (this.objectMouseOver.typeOfHit == MovingObjectPosition.MovingObjectType.TerrainObject)
+            {
+                var5 = this.objectMouseOver.TerrainObjectX;
+                int var6 = this.objectMouseOver.TerrainObjectY;
+                int var7 = this.objectMouseOver.TerrainObjectZ;
+                TerrainObject var8 = this.theWorld.getTerrainObject(var5, var6, var7);
+
+                if (var8.getMaterial() == Material.air)
+                {
+                    return;
+                }
+
+                var2 = var8.getItem(this.theWorld, var5, var6, var7);
+
+                if (var2 == null)
+                {
+                    return;
+                }
+
+                var4 = var2.getHasSubtypes();
+                TerrainObject var9 = var2 instanceof ItemTerrainObject ? TerrainObject.getTerrainObjectFromItem(var2) : var8;
+                var3 = var9.getDamageValue(this.theWorld, var5, var6, var7);
+            }
+            else
+            {
+                if (this.objectMouseOver.typeOfHit != MovingObjectPosition.MovingObjectType.ENTITY || this.objectMouseOver.entityHit == null || !var1)
+                {
+                    return;
+                }   
+                else
+                {
+                    var2 = Item.spawn_egg;
+                    var3 = EntityList.getEntityID(this.objectMouseOver.entityHit);
+                    var4 = true;
+
+                    if (var3 <= 0 || !EntityList.entityEggs.containsKey(Integer.valueOf(var3)))
+                    {
+                        return;
+                    }
+                }
+            }
+
+            this.thePlayer.inventory.func_146030_a(var2, var3, var4, var1);
+
+            if (var1)
+            {
+                var5 = this.thePlayer.inventoryContainer.inventorySlots.size() - 9 + this.thePlayer.inventory.currentItem;
+                this.playerController.sendSlotPacket(this.thePlayer.inventory.getStackInSlot(this.thePlayer.inventory.currentItem), var5);
+            }
+        }
+    }
+
+    /**
+     * adds core server Info (GL version , Texture pack, isModded, type), and the StructureWorldInfo to the crash report
+     */
+    public CrashReport addGraphicsAndWorldToCrashReport(CrashReport p_71396_1_)
+    {
+        p_71396_1_.getCategory().addCrashSectionCallable("Launched Version", new Callable()
+        {
+            public String call()
+            {
+                return TheStructureWorld.this.launchedVersion;
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("LWJGL", new Callable()
+        {
+            public String call()
+            {
+                return Sys.getVersion();
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("OpenGL", new Callable()
+        {
+            public String call()
+            {
+                return GL11.glGetString(GL11.GL_RENDERER) + " GL version " + GL11.glGetString(GL11.GL_VERSION) + ", " + GL11.glGetString(GL11.GL_VENDOR);
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("GL Caps", new Callable()
+        {
+            public String call()
+            {
+                return OpenGlHelper.func_153172_c();
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("Type", new Callable()
+        {
+           public String call()
+            {
+                return "Client (map_client.txt)";
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("Resource Packs", new Callable()
+        {
+           public String call()
+            {
+                return TheStructureWorld.this.gameSettings.resourcePacks.toString();
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("Vec3 Pool Size", new Callable()
+        {
+            public String call()
+            {
+                byte var1 = 0;
+                int var2 = 56 * var1;
+                int var3 = var2 / 1024 / 1024;
+                byte var4 = 0;
+                int var5 = 56 * var4;
+                int var6 = var5 / 1024 / 1024;
+                return var1 + " (" + var2 + " bytes; " + var3 + " MB) allocated, " + var4 + " (" + var5 + " bytes; " + var6 + " MB) used";
+            }
+        });
+        p_71396_1_.getCategory().addCrashSectionCallable("Anisotropic Filtering", new Callable()
+        {
+            public String func_152388_a()
+            {
+                return TheStructureWorld.this.gameSettings.anisotropicFiltering == 1 ? "Off (1)" : "On (" + TheStructureWorld.this.gameSettings.anisotropicFiltering + ")";
+            }
+            public Object call()
+            {
+                return this.func_152388_a();
+            }
+        });
+
+        if (this.theWorld != null)
+        {
+            this.theWorld.addStructureWorldInfoToCrashReport(p_71396_1_);
+        }
+
+        return p_71396_1_;
+    }
+
+    /**
+     * Return the singleton StructureWorld instance for the game
+     */
+    public static TheStructureWorld getTheStructureWorld()
+    {
+        return TheStructureWorld;
+    }
+
+    public void scheduleResourcesRefresh()
+    {
+        this.refreshTexturePacksScheduled = true;
+    }
+
+
+    /**
+     * Set the current ServerData instance.
+     */
+    public void setServerData(ServerData p_71351_1_)
+    {
+        this.currentServerData = p_71351_1_;
+    }
+
+    public ServerData func_147104_D()
+    {
+        return this.currentServerData;
+    }
+
+    public boolean isIntegratedServerRunning()
+    {
+        return this.integratedServerIsRunning;
+    }
+
+    /**
+     * Returns true if there is only one player playing, and the current server is the integrated one.
+     */
+    public boolean isSingleplayer()
+    {
+        return this.integratedServerIsRunning && this.theIntegratedServer != null;
+    }
+
+    /**
+     * Returns the currently running integrated server
+     */
+    public IntegratedServer getIntegratedServer()
+    {
+        return this.theIntegratedServer;
+    }
+
+    public static void stopIntegratedServer()
+    {
+        if (TheStructureWorld != null)
+        {
+            IntegratedServer var0 = TheStructureWorld.getIntegratedServer();
+
+            if (var0 != null)
+            {
+                var0.stopServer(false);
+            }
+        }
+    }
+
+    /**
+     * Gets the system time in milliseconds.
+     */
+    public static long getSystemTime()
+    {
+        return Sys.getTime() * 1000L / Sys.getTimerResolution();
+    }
+
+    /**
+     * Returns whether we're in full screen or not.
+     */
+    public boolean isFullScreen()
+    {
+        return this.fullscreen;
+    }
+    
+    /**
+     * Returns whether we're in full screen or not.
+     */
+    public void setFullScreen(boolean setFullScreen)
+    {
+    	this.fullscreen = setFullScreen;
+    }
+
+    public Session getSession()
+    {
+        return this.session;
+    }
+
+    public Multimap func_152341_N()
+    {
+        return this.field_152356_J;
+    }
+
+    public Proxy getProxy()
+    {
+        return this.proxy;
+    }
+
+    public TextureManager getTextureManager()
+    {
+        return renderEngine;
+    }
+
+    public IResourceManager getResourceManager()
+    {
+        return this.resourceManager;
+    }
+
+    public boolean isJava64bit()
+    {
+        return this.jvm64bit;
+    }
+
+    public SoundHandler getSoundHandler()
+    {
+        return this.SoundHandler;
+    }
+
+    public MusicTicker.MusicType func_147109_W()
+    {
+        return MusicTicker.MusicType.CREDITS;
+    }
+   
+
+    static final class SwitchMovingObjectType
+    {
+        static final int[] i = new int[MovingObjectPosition.MovingObjectType.values().length];
+    
+        static
+        {
+            try
+            {
+                i[MovingObjectPosition.MovingObjectType.ENTITY.ordinal()] = 1;
+            }
+            catch (NoSuchFieldError var2)
+            {
+                ;
+            }
+
+            try
+            {
+                i[MovingObjectPosition.MovingObjectType.TerrainObject.ordinal()] = 2;
+            }
+            catch (NoSuchFieldError var1)
+            {
+                ;
+            }
+        }
+    }
+}

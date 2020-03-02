@@ -1,0 +1,245 @@
+package nl.thestructureworld.client.renderer;
+
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.entity.RenderItem;
+import nl.thestructureworld.client.renderer.tileentity.TileEntityRendererDispatcher;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.terrainandobjects.TerrainDirt;
+import nl.thestructureworld.terrainandobjects.TerrainObject;
+import nl.thestructureworld.terrainandobjects.TerrainAir;
+import nl.thestructureworld.tileentity.TileEntity;
+import nl.thestructureworld.tileentity.TileEntityEnchantmentTable;
+import nl.thestructureworld.util.AxisAlignedBB;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.world.World;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL21;
+import org.lwjgl.util.glu.GLU;
+import org.lwjgl.util.glu.Sphere;
+
+public class WorldRenderer
+{
+  
+    /** Reference to the World object. */
+    public World worldObj;
+    private int glRenderList = -1;
+    private static Tessellator tessellator = Tessellator.instance;
+
+    /** Pos X minus */
+    public int posXMinus;
+
+    /** Pos Y minus */
+    public int posYMinus;
+
+    /** Pos Z minus */
+    public int posZMinus;
+
+    /** Pos X plus */
+    public int posXPlus;
+
+    /** Pos Y plus */
+    public int posYPlus;
+
+    /** Pos Z plus */
+    public int posZPlus;
+
+    /** Area index */
+    public int AreaIndex;
+
+    /** Is this renderer visible according to the occlusion query */
+    public boolean isVisible = true;
+
+    /** Is this renderer waiting on the result of the occlusion query */
+    public boolean isWaitingOnOcclusionQuery;
+
+    /** OpenGL occlusion query */
+    public int glOcclusionQuery;
+
+    public WorldRenderer(World world, int x, int y, int z, int glRenderList)
+    {
+        this.worldObj = world;
+        this.glRenderList = glRenderList;
+    }
+
+   
+    
+    
+    /**
+     * Lists of what needs a fast update and what not.
+     * Some lists contain Objects like grass, plants and glass because those should be render after everything to 
+     * prevent weird textures rendered through each other.
+     * Other lists contain trees,plants, minerals crystals etc. and those will be included in the lists above but have there own 
+     * lists so AI's of other creatures can search much faster and create an path to this location
+     */
+    public static List<ArrayListTerrain> ArrayListTerrain = new ArrayList<ArrayListTerrain>();
+    public static List<ArrayListTerrain> ArrayListSmallTerrain = new ArrayList<ArrayListTerrain>();
+    public static List<ArrayListTerrain> ArrayListPlant = new ArrayList<ArrayListTerrain>();
+    
+    public int heighttorender = -2;
+    
+    /**
+     * Update the area and place it in the list
+     */
+    public void updateTerrain(EntityLivingBase base)
+    {
+    		ArrayListTerrain = new ArrayList<ArrayListTerrain>();
+    		ArrayListPlant = new ArrayList<ArrayListTerrain>();
+    		heighttorender = -2;
+    	    EntityLivingBase RenderVieuw = TheStructureWorld.getTheStructureWorld().renderViewEntity;
+            int X = MathHelper.floor_double(RenderVieuw.posX);
+            int Y = MathHelper.floor_double(RenderVieuw.posY)-2;
+            int Z = MathHelper.floor_double(RenderVieuw.posZ);
+            for(int U = 0;U<36;++U)
+            {
+            //The Border from outside to inside
+            for (int TX = X-(36-U);TX < (X+(37-U)); ++TX)
+            {
+            for (int TZ = Z-(36-U);TZ < (Z+(37-U)); ++TZ)
+            {
+            if(!((X >= TX-(35-U) && X <= TX+(35-U)) && (Z >= TZ-(35-U) && Z <= TZ+(35-U))))
+            {
+            if(this.heighttorender == -2 || (RenderVieuw.worldObj.getTerrainObject(TX, this.heighttorender, TZ) != TerrainObject.air && RenderVieuw.worldObj.getTerrainObject(TX, this.heighttorender+1, TZ) == TerrainObject.air))	
+            {
+            for(int Yy= 0;Yy<255;++Yy)
+            {
+            	if(RenderVieuw.worldObj.getTerrainObject(TX, Yy, TZ) != TerrainObject.air && RenderVieuw.worldObj.getTerrainObject(TX, Yy+1, TZ) == TerrainObject.air)
+            	{
+            		this.heighttorender = Yy;
+            		continue;
+            	}
+            }}   
+            if(base.worldObj.getTerrainObject(TX,heighttorender+1,TZ) == TerrainObject.unnamedObject)
+            {
+            ArrayListTerrain.add(new ArrayListTerrain(TX,heighttorender+1,TZ, TerrainObject.unnamedObject));
+            }
+            else if(!base.worldObj.getTerrainObject(TX,heighttorender,TZ).isPlant())
+            {
+            ArrayListTerrain.add(new ArrayListTerrain(TX,heighttorender,TZ, base.worldObj.getTerrainObject(TX,heighttorender,TZ),(int)(U*1.2)));
+            }
+            if(base.worldObj.getTerrainObject(TX,heighttorender+1,TZ).isPlant())
+            {
+            ArrayListPlant.add(new ArrayListTerrain(TX,heighttorender+1,TZ, base.worldObj.getTerrainObject(TX,heighttorender,TZ),U));
+            }
+            if(base.worldObj.getTerrainObject(TX,heighttorender+1,TZ) != TerrainObject.air)
+            {
+            	ArrayListTerrain.add(new ArrayListTerrain(TX,heighttorender+1,TZ, base.worldObj.getTerrainObject(TX,heighttorender+1,TZ),U));
+            }
+            }}}}
+    }
+    
+    public static boolean objectRemoved = true;
+    public List tileEntityRenderers = new ArrayList();
+    public List tileEntities;
+
+    
+    public void renderSky(EntityLivingBase base,int list)
+    {
+    	  EntityLivingBase RenderVieuw = TheStructureWorld.getTheStructureWorld().renderViewEntity;
+          int X = MathHelper.floor_double(RenderVieuw.posX);
+          int Z = MathHelper.floor_double(RenderVieuw.posZ);
+          TerrainObject object = base.worldObj.getTerrainObject(X, heighttorender, Z);
+          RenderTerrain terrain = new RenderTerrain();
+          GL11.glNewList(list, GL11.GL_COMPILE);
+          tessellator.startDrawingQuads();
+          GL13.glMultiTexCoord2f(33985, (float)5000 % 65536 / 1.0F, (float)5000 / 65536 / 1.0F);
+          terrain.renderAllTerrain(null,X,heighttorender,Z,0); 
+          if(this.tessellator.isDrawing)
+      	  {
+          tessellator.draw();
+      	  }
+          tessellator.setTranslation(0.0D, 0.0D, 0.0D);
+          GL11.glEndList();
+    }
+    
+    
+    public void renderDirtTerrain(EntityLivingBase base,int list)
+    {
+    	  EntityLivingBase RenderVieuw = TheStructureWorld.getTheStructureWorld().renderViewEntity;
+          int X = MathHelper.floor_double(RenderVieuw.posX);
+          int Y = MathHelper.floor_double(RenderVieuw.posY)-2;
+          int Z = MathHelper.floor_double(RenderVieuw.posZ);
+          TerrainObject object = base.worldObj.getTerrainObject(X, Y, Z);
+          RenderTerrain terrain = new RenderTerrain();
+          GL11.glNewList(list, GL11.GL_COMPILE);
+          tessellator.startDrawingQuads();
+          terrain.renderTerrainandObjectUsingTexture(TerrainObject.DirtTerrain);  
+          for(int l=0;l<ArrayListTerrain.size();++l)
+          {
+          int XFL = (int)ArrayListTerrain.get(l).x;  
+          int YFL = (int)ArrayListTerrain.get(l).y;  
+          int ZFL = (int)ArrayListTerrain.get(l).z;
+          int Quality = (int)ArrayListTerrain.get(l).textureQuality;
+          TerrainObject objectO2 = base.worldObj.getTerrainObject(XFL, YFL, ZFL);
+          
+          if(objectO2 instanceof TerrainDirt)
+          {
+          terrain.renderAllTerrain(objectO2,XFL,YFL,ZFL,36-Quality); 
+          }
+          }
+          if(this.tessellator.isDrawing)
+      	  {
+          tessellator.draw();
+      	  }
+          tessellator.setTranslation(0.0D, 0.0D, 0.0D);
+          GL11.glEndList();
+    }
+   
+    //http://devernay.free.fr/cours/opengl/materials.html
+   
+    public void renderPlant(EntityLivingBase base,int list)
+    {
+          RenderTerrain terrain = new RenderTerrain();
+          GL11.glNewList(list, GL11.GL_COMPILE);     
+          tessellator.startDrawingQuads();
+          terrain.renderTerrainandObjectUsingTexture(TerrainObject.DirtTerrain);  
+          GL13.glMultiTexCoord2f(33985, (float)5000 % 65536 / 1.0F, (float)5000 / 65536 / 1.0F);
+          for(int l=0;l<ArrayListPlant.size();++l)
+          {
+          int XFL = (int)ArrayListPlant.get(l).x;  
+          int YFL = (int)ArrayListPlant.get(l).y;  
+          int ZFL = (int)ArrayListPlant.get(l).z;
+          int Quality = (int)ArrayListPlant.get(l).textureQuality;
+          TerrainObject objectO = base.worldObj.getTerrainObject(XFL, YFL, ZFL);
+          terrain.renderAllTerrain(objectO,XFL,YFL,ZFL,36-Quality);   
+          }
+          if(this.tessellator.isDrawing)
+      	  {
+          tessellator.draw();
+      	  }
+          tessellator.setTranslation(0.0D, 0.0D, 0.0D);
+          GL11.glEndList();
+    }
+  
+   
+
+    /**
+     * Returns the distance of this Area renderer to the entity without performing the final normalizing square root,
+     * for performance reasons.
+     */
+    public float distanceToEntitySquared(Entity p_78912_1_)
+    {
+        float var2 = (float)(p_78912_1_.posX - (double)this.posXPlus);
+        float var3 = (float)(p_78912_1_.posY - (double)this.posYPlus);
+        float var4 = (float)(p_78912_1_.posZ - (double)this.posZPlus);
+        return var2 * var2 + var3 * var3 + var4 * var4;
+    }
+
+   
+    public int getGLCallList(int next)
+    {
+        return  this.glRenderList + next;
+    }
+
+ 
+
+   
+
+}

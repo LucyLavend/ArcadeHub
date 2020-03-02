@@ -1,0 +1,152 @@
+package nl.miystengine.client.renderer.entity;
+
+import nl.miystengine.client.FileBasicJava;
+import nl.miystengine.client.MiystEngine;
+import nl.miystengine.client.gui.ArrayListStrings;
+import nl.miystengine.client.gui.IngameGui;
+import nl.miystengine.client.renderer.EntityRenderer;
+import nl.miystengine.client.renderer.basicmodels.ArrayListOBJModels;
+import nl.miystengine.client.renderer.terrain.Terrain;
+import nl.miystengine.client.shaders.Camera;
+import nl.miystengine.client.shaders.normal.NormalMappingShader;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.util.vector.Vector2f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+ 
+public class EntityPickupRender extends BasicEntityRender
+{
+	private int lowT;
+	private int LOD;
+	private boolean alphaStartStringBack;
+	private float alphaStartString;
+	private int itemType = 0;
+	private static int canPickUpTimer = 0;
+	private static int loadModel = 0;
+	private String popupname;
+	
+	public EntityPickupRender(int itemType,String texture,String modelID,String popupName) 
+    {
+		super(new ModelBasic(false,0,10,2,2,"objectsandterrain/"+texture,new Vector4f(1F,2.5F,0F,0F),modelID,true,false),new float[]{0,0,0},0,0,0,0,1F);
+	    this.popupname = popupName;
+		this.itemType = itemType;
+        this.lowT = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/" + texture + "_low.png");
+	    if(loadModel == 0)
+	    {
+	    	EntityRenderer.OBJModelList.add(new ArrayListOBJModels(modelID));
+	        EntityRenderer.OBJModelList.add(new ArrayListOBJModels(modelID + "_LOD"));
+	        for(int i = 0;i < EntityRenderer.OBJModelList.size();++i)
+	    	{
+	        	if(EntityRenderer.OBJModelList.get(i).nameOBJ.contains(modelID + "_LOD"))
+	        	{
+	        		this.LOD = EntityRenderer.OBJModelList.get(i).idModel;
+	        	}
+	        	else if(EntityRenderer.OBJModelList.get(i).nameOBJ.contains(modelID))
+	        	{
+	        		this.model.glListID = EntityRenderer.OBJModelList.get(i).idModel;
+	        	}
+	    	}
+	        loadModel = 1;
+	    }
+        this.materialType = 3;   
+    }
+	
+	
+	public void updateRenderer2()
+    {
+		Vector3f pos = MiystEngine.miystengine.entityRenderer.picker().getCurrentTerrainPoint();
+
+     	if(this.distanceFromcamera < 8F && pos != null && this.position.y > pos.y - 8F && this.position.y < pos.y + 8F && this.position.z > pos.z - 5F && this.position.z < pos.z + 5F && this.position.x > pos.x - 5F && this.position.x < pos.x + 5F)
+     	{
+			if(!this.alphaStartStringBack  && this.alphaStartString < 0.001F)
+		    {
+		      this.alphaStartStringBack = true;
+		    }
+		    else if(this.alphaStartStringBack  && this.alphaStartString > 0.399F)
+		    {
+		      this.alphaStartStringBack = false;
+		    }
+					
+			if(!this.alphaStartStringBack && this.alphaStartString > 0F)
+			{
+			   this.alphaStartString -= 0.001F;
+			   this.alphaStartString -= 0.001F;
+			   this.alphaStartString -= 0.001F;
+			}
+		    else if(this.alphaStartStringBack && this.alphaStartString < 0.4F)
+			{
+			   this.alphaStartString += 0.001F;
+			   this.alphaStartString += 0.001F;
+			   this.alphaStartString += 0.001F;
+			}
+			
+			if(this.canPickUpTimer == 0 && Keyboard.isKeyDown(Keyboard.KEY_E) && pos != null)
+	     	{
+	     		if(this.itemType == 0)
+	     		{
+	     			IngameGui.arraylistTips.add(new ArrayListStrings(this.popupname, 1000));
+	     		}
+	     		else if(this.itemType == 1)
+	     		{
+	     			IngameGui.arraylistTips.add(new ArrayListStrings(this.popupname, 1000));
+	     		}
+	     		else if(this.itemType == 2)
+	     		{
+	     			IngameGui.arraylistTips.add(new ArrayListStrings(this.popupname, 1000));
+	     		}
+	     		else if(this.itemType == 3)
+	     		{
+	     			IngameGui.arraylistTips.add(new ArrayListStrings(this.popupname, 1000));
+	     		}
+	     		this.canPickUpTimer = 100;
+	     		this.deleteMe = true;
+	     	}
+     	}
+     	else if(this.alphaStartString > 0)
+     	{
+     		this.alphaStartString -= 0.01F;
+     	}
+
+     	if(this.canPickUpTimer > 0)
+     	{
+     		--this.canPickUpTimer ;
+     	}
+		
+		this.applyGravityByWeight();
+    }
+	
+	 @Override
+	 public boolean renderModel(NormalMappingShader shader)
+	 {	
+		shader.loadTransformationMatrix(MiystEngine.miystengine.entityRenderer.camera.createTransformationMatrix(new Vector3f(this.getPosition().x,this.getPosition().y,this.getPosition().z),this.getRotX(),this.getRotY(), this.getRotZ(), this.getScale()));	
+		//Render
+		shader.addColor(new Vector3f(this.alphaStartString,this.alphaStartString,this.alphaStartString));
+		float distance = Vector2f.sub(new Vector2f(Camera.camX + MiystEngine.miystengine.thePlayer.getMoveX() + MiystEngine.miystengine.thePlayer.getMoveX(),Camera.camZ), new Vector2f(this.position.x,this.position.z), null).lengthSquared();
+		//Set LOD or normal model
+		if(distance < 25)
+		{
+			GL13.glActiveTexture(GL13.GL_TEXTURE13);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, this.getModel().textureIDModel512x); 
+		}
+		else
+		{
+			GL13.glActiveTexture(GL13.GL_TEXTURE13);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D,this.lowT); 
+		}
+			
+		if(this.distanceFromcamera < 175F)
+		{
+			GL11.glCallList(model.glListID);
+		}
+		else
+		{
+			GL11.glCallList(this.LOD);
+		}
+		return true;
+	 }
+	
+}

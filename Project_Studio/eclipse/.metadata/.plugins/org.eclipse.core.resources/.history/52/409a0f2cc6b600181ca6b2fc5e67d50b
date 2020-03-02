@@ -1,0 +1,160 @@
+package nl.thestructureworld.client.shaders;
+ 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import nl.thestructureworld.client.FileBasicJava;
+
+import org.lwjgl.util.vector.Vector2f;
+import org.lwjgl.util.vector.Vector3f;
+
+import nl.thestructureworld.client.renderer.entity.arrays.ArrayListConvertOBJ;
+import nl.thestructureworld.client.renderer.entity.arrays.ArrayListEntity;
+
+public class OBJLoader 
+{
+	public static List<ArrayListConvertOBJ> ArrayListConvertOBJ = new ArrayList<ArrayListConvertOBJ>();
+	public static String v;
+	public static int number = 0;
+	public static int numberV = 0;
+ 
+
+	public static RawModel loadObjModel(String fileName, Loader loader,boolean writeDown) 
+    {
+        FileReader fr = null;
+        try 
+        {
+		fr = new FileReader(new File(FileBasicJava.sourceModels+fileName+".obj"));
+		} 
+        catch (FileNotFoundException e1) 
+		{
+			System.out.println("Couldn't load file: "+fr.toString());
+			e1.printStackTrace();
+		}
+        BufferedReader reader = new BufferedReader(fr);
+        String line;
+        List<Vector3f> vertices = new ArrayList<Vector3f>();
+        List<Vector2f> textures = new ArrayList<Vector2f>();
+        List<Vector3f> normals = new ArrayList<Vector3f>();
+        List<Integer> indices = new ArrayList<Integer>();
+        float[] verticesArray = null;
+        float[] normalsArray = null;
+        float[] textureArray = null;
+        int[] indicesArray = null;
+        try 
+        {
+            while (true) 
+            {
+                line = reader.readLine();
+                String[] currentLine = line.split(" ");
+                if(line.startsWith("v ")) 
+                {
+                    Vector3f vertex = new Vector3f(Float.parseFloat(currentLine[1]),
+                    Float.parseFloat(currentLine[2]), Float.parseFloat(currentLine[3]));
+                    vertices.add(vertex);
+                    if(writeDown){ArrayListConvertOBJ.add(new ArrayListConvertOBJ(vertex+"",""));}
+                } 
+                else if(line.startsWith("vt ")) 
+                {
+                    Vector2f texture = new Vector2f(Float.parseFloat(currentLine[1]),
+                    Float.parseFloat(currentLine[2]));
+                    textures.add(texture);
+                    if(writeDown&&number<ArrayListConvertOBJ.size()){ArrayListConvertOBJ.get(number).textureCoords=""+texture;++number;}
+                } 
+                else if(line.startsWith("vn ")) 
+                {
+                    Vector3f normal = new Vector3f(Float.parseFloat(currentLine[1]),
+                    Float.parseFloat(currentLine[2]), Float.parseFloat(currentLine[3]));
+                    normals.add(normal);
+                } 
+                else if(line.startsWith("f ")) 
+                {
+                    textureArray = new float[vertices.size() * 2];
+                    normalsArray = new float[vertices.size() * 3];
+                    break;
+                }
+            }
+             
+ 
+            while (line != null) 
+            {
+                if(!line.startsWith("f ")) 
+                {
+                    line = reader.readLine();
+                    continue;
+                }
+                String[] currentLine2 = line.split(" ");
+                String[] vertex1 = currentLine2[1].split("/");
+                String[] vertex2 = currentLine2[2].split("/");
+                String[] vertex3 = currentLine2[3].split("/");
+                processVertex(vertex1,indices,textures,normals,textureArray,normalsArray);
+                processVertex(vertex2,indices,textures,normals,textureArray,normalsArray);
+                processVertex(vertex3,indices,textures,normals,textureArray,normalsArray);
+                line = reader.readLine();
+            }
+            reader.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+         
+        verticesArray = new float[vertices.size()*3];
+        indicesArray = new int[indices.size()];
+         
+        int vertexPointer = 0;
+        for(Vector3f vertex:vertices)
+        {
+            verticesArray[vertexPointer++] = vertex.x;
+            verticesArray[vertexPointer++] = vertex.y;
+            verticesArray[vertexPointer++] = vertex.z;
+            if(writeDown&&numberV<ArrayListConvertOBJ.size()){ArrayListConvertOBJ.get(numberV).indices=""+vertex;++number;}
+        }
+        for(int i=0;i<indices.size();i++)
+        {
+            indicesArray[i] = indices.get(i);
+        }
+        
+        if(writeDown)
+        {
+        BufferedWriter writer = null;
+        String timeLog =  FileBasicJava.sourceModels+fileName+".txt";
+        File logFile = new File(timeLog);
+        try{
+		writer = new BufferedWriter(new FileWriter(logFile));
+		writer.write("Size: "+ArrayListConvertOBJ.size());
+	    writer.newLine(); 
+        for(int i=0;i<ArrayListConvertOBJ.size();i++)
+        {
+        String model = "model.addVertexTerrain("+ArrayListConvertOBJ.get(i).triangle+","+ArrayListConvertOBJ.get(i).textureCoords+ArrayListConvertOBJ.get(i).indices+");";
+        model = model.replace("Vector3f[", "");
+        model = model.replace("Vector2f[", "");
+        model = model.replace("]", "F");
+        model = model.replace(", ", "F, ");
+        writer.write(model);
+        writer.newLine(); 
+        }
+        writer.close();
+        } catch (IOException e){e.printStackTrace();System.out.println("Something went wrong Writing the File!");}}
+        return loader.loadToVAO(verticesArray, textureArray, normalsArray, indicesArray);
+    }
+ 
+    private static void processVertex(String[] vertexData, List<Integer> indices,List<Vector2f> textures, List<Vector3f> normals, float[] textureArray,float[] normalsArray) 
+    {
+        int currentVertexPointer = Integer.parseInt(vertexData[0]) - 1;
+        indices.add(currentVertexPointer);
+        Vector2f currentTex = textures.get(Integer.parseInt(vertexData[1])-1);
+        textureArray[currentVertexPointer*2] = currentTex.x;
+        textureArray[currentVertexPointer*2+1] = 1 - currentTex.y;
+        Vector3f currentNorm = normals.get(Integer.parseInt(vertexData[2])-1);
+        normalsArray[currentVertexPointer*3] = currentNorm.x;
+        normalsArray[currentVertexPointer*3+1] = currentNorm.y;
+        normalsArray[currentVertexPointer*3+2] = currentNorm.z; 
+    }
+ 
+}

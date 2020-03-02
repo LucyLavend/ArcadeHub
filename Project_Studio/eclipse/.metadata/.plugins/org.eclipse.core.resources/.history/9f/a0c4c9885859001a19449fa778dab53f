@@ -1,0 +1,10 @@
+package nl.miystengine.util;
+
+import java.util.Random;
+
+public class MathHelper
+{
+	
+	
+	
+}

@@ -1,0 +1,1276 @@
+package nl.thestructureworld.client.renderer;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.Callable;
+
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.KeyAndOtherSettings;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.gui.CreateStructureWorldGui;
+import nl.thestructureworld.client.gui.IngameGui;
+import nl.thestructureworld.client.gui.IngameMenuAndOptionsGui;
+import nl.thestructureworld.client.gui.ScaledResolution;
+import nl.thestructureworld.client.model.ModelBook;
+import nl.thestructureworld.client.multiplayer.WorldClient;
+import nl.thestructureworld.client.renderer.entity.RenderManager;
+import nl.thestructureworld.client.renderer.terrain.MaterialADSS;
+import nl.thestructureworld.client.renderer.terrain.RenderTerrain;
+import nl.thestructureworld.client.renderer.texture.DynamicTexture;
+import nl.thestructureworld.client.renderer.texture.TextureManager;
+import nl.thestructureworld.client.renderer.tileentity.TileEntityRendererDispatcher;
+import nl.thestructureworld.client.resources.IResourceManager;
+import nl.thestructureworld.client.resources.IResourceManagerReloadListener;
+import nl.thestructureworld.client.shader.ShaderGroup;
+import nl.thestructureworld.client.shader.ShaderLinkHelper;
+import nl.thestructureworld.crash.CrashReport;
+import nl.thestructureworld.crash.CrashReportCategory;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.entity.EntitySpider;
+import nl.thestructureworld.entity.player.EntityPlayer;
+import nl.thestructureworld.entity.player.EntityPlayerSP;
+import nl.thestructureworld.server.TheStructureWorldServer;
+import nl.thestructureworld.terrainandobjects.TerrainObject;
+import nl.thestructureworld.terrainandobjects.Material;
+import nl.thestructureworld.tileentity.TileEntity;
+import nl.thestructureworld.util.AxisAlignedBB;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.util.MouseFilter;
+import nl.thestructureworld.util.MovingObjectPosition;
+import nl.thestructureworld.util.ReportedException;
+import nl.thestructureworld.util.ResourceLocation;
+import nl.thestructureworld.util.Vec3;
+import nl.thestructureworld.world.IWorldAccess;
+import nl.thestructureworld.world.World;
+import nl.thestructureworld.world.WorldServer;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.ARBOcclusionQuery;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
+import org.lwjgl.opengl.OpenGLException;
+import org.lwjgl.util.glu.Project;
+import org.lwjgl.util.glu.Sphere;
+
+import com.google.common.collect.Maps;
+import com.google.gson.JsonSyntaxException;
+
+public class EntityRenderer implements IWorldAccess
+{
+	
+	public static WorldRenderer renderWorld2 = null;
+	public List tileEntities = new ArrayList();
+    public static WorldClient theWorld;
+    public static WorldRenderer worldRenderersToUpdate;
+    public WorldRenderer[] worldRenderers;
+    /** OpenGL render lists base */
+    private int glRenderListBase;
+    
+    /** OpenGL occlusion query base */
+    private IntBuffer glOcclusionQueryBase;
+
+    /** Is occlusion testing enabled */
+    private boolean occlusionEnabled;
+
+    /**
+     * counts the cloud render updates. Used with mod to stagger some updates
+     */
+    private int cloudTickCounter;
+
+    /** The star GL Call list */
+    private int starGLCallList;
+
+    /** OpenGL sky list */
+    private int glSkyList;
+
+    /** OpenGL sky list 2 */
+    private int glSkyList2;
+    
+    private final Map mapSoundPositions = Maps.newHashMap();
+    private boolean displayListEntitiesDirty;
+    private int displayListEntities;
+  
+    /** Render entities startup counter (init value=2) */
+    private int renderEntitiesStartupCounter = 2;
+
+    /** Occlusion query result */
+    IntBuffer occlusionResult = GLAllocation.createDirectIntBuffer(64);
+
+    /** How many renderers are loaded this frame that try to be rendered */
+    private int renderersLoaded;
+
+    /** How many renderers are being clipped by the frustrum this frame */
+    private int renderersBeingClipped;
+
+    /** How many renderers are being occluded this frame */
+    private int renderersBeingOccluded;
+
+    /** How many renderers are actually being rendered this frame */
+    private int renderersBeingRendered;
+
+    /** World renderers check index */
+    private int worldRenderersCheckIndex;
+
+    /** List of OpenGL lists for the current render pass */
+    private List glRenderLists = new ArrayList();
+
+    /** All render lists (fixed length 4) */
+    public static RenderList allRenderLists = new RenderList();
+
+    /**
+     * The offset used to determine if a renderer is one of the sixteenth that are being updated this frame
+     */
+    int frustuttwheckOffset;
+    
+    private static final Logger logger = LogManager.getLogger();
+    public static boolean anaglyphEnable;
+
+    /** A reference to the TheStructureWorld object. */
+    private TheStructureWorld ttw;
+    private float farPlaneDistance;
+    public final ItemRenderer itemRenderer;
+
+     /** Pointed entity */
+    private Entity pointedEntity;
+    private MouseFilter mouseFilterXAxis = new MouseFilter();
+    private MouseFilter mouseFilterYAxis = new MouseFilter();
+
+    private float thirdPersonDistance = 4.0F;
+
+    /** Third person distance temp */
+    private float thirdPersonDistanceTemp = 4.0F;
+    private float debugCamYaw;
+    private float prevDebugCamYaw;
+    private float debugCamPitch;
+    private float prevDebugCamPitch;
+
+    /** Smooth cam yaw */
+    private float smoothCamYaw;
+
+    /** Smooth cam pitch */
+    private float smoothCamPitch;
+
+    /** Smooth cam filter X */
+    private float smoothCamFilterX;
+
+    /** Smooth cam filter Y */
+    private float smoothCamFilterY;
+
+    /** Smooth cam partial ticks */
+    private float smoothCamPartialTicks;
+    private float debugCamFOV;
+    private float prevDebugCamFOV;
+    private float camRoll;
+    private float prevCamRoll;
+
+    /**
+     * The texture id of the TerrainObjectlight/skylight texture used for lighting effects
+     */
+    private final DynamicTexture lightmapTexture;
+
+    /**
+     * Colors computed in updateLightmap() and loaded into the lightmap emptyTexture
+     */
+    private final int[] lightmapColors;
+   
+    /** FOV modifier hand */
+    private float fovModifierHand;
+
+    /** FOV modifier hand prev */
+    private float fovModifierHandPrev;
+
+    /** FOV multiplier temp */
+    private float fovMultiplierTemp;
+
+    /** Cloud fog mode */
+    private boolean cloudFog;
+    private final IResourceManager resourceManager;
+    private double cameraYaw;
+    private double cameraPitch;
+
+    /** Previous frame time in milliseconds */
+    private long prevFrameTime;
+
+    /** End time of last render (ns) */
+    private long renderEndNanoTime;
+
+
+    /** Torch flicker X */
+    float torchFlickerX;
+
+    /** Torch flicker DX */
+    float torchFlickerDX;
+
+    /** Torch flicker Y */
+    float torchFlickerY;
+
+    /** Torch flicker DY */
+    float torchFlickerDY;
+    private Random random;
+
+    /** Rain sound counter */
+    private int rainSoundCounter;
+
+    /** Rain X coords */
+    float[] rainXCoords;
+
+    /** Rain Y coords */
+    float[] rainYCoords;
+
+    /**
+     * Debug view direction (0=OFF, 1=Front, 2=Right, 3=Back, 4=Left, 5=TiltLeft, 6=TiltRight)
+     */
+    public int debugViewDirection;
+
+    public EntityRenderer(TheStructureWorld p_i45076_1_, IResourceManager p_i45076_2_)
+    {
+        this.prevFrameTime = TheStructureWorld.getSystemTime();
+        this.random = new Random();
+        
+        this.ttw = p_i45076_1_;
+        this.resourceManager = p_i45076_2_;
+        this.itemRenderer = new ItemRenderer(p_i45076_1_);
+        this.lightmapTexture = new DynamicTexture(16, 16);
+        this.lightmapColors = this.lightmapTexture.getTextureData();
+        this.glRenderListBase = GLAllocation.generateDisplayLists(34 * 34 * 16 * 3);
+        this.displayListEntitiesDirty = false;
+        this.displayListEntities = GLAllocation.generateDisplayLists(1);
+        this.occlusionEnabled = GLContext.getCapabilities().GL_ARB_occlusion_query;
+
+        if (this.occlusionEnabled)
+        {
+            this.occlusionResult.clear();
+            this.glOcclusionQueryBase = GLAllocation.createDirectIntBuffer(34 * 34 * 16);
+            this.glOcclusionQueryBase.clear();
+            this.glOcclusionQueryBase.position(0);
+            this.glOcclusionQueryBase.limit(34 * 34 * 16);
+            ARBOcclusionQuery.glGenQueriesARB(this.glOcclusionQueryBase);
+        }
+
+        this.starGLCallList = GLAllocation.generateDisplayLists(3);
+        Tessellator var4 = Tessellator.instance;
+        this.glSkyList = this.starGLCallList + 1;
+        GL11.glNewList(this.glSkyList, GL11.GL_COMPILE);
+        byte var6 = 64;
+        int var7 = 256 / var6 + 2;
+        float var5 = 16.0F;
+        int var8;
+        int var9;
+
+        for (var8 = -var6 * var7; var8 <= var6 * var7; var8 += var6)
+        {
+            for (var9 = -var6 * var7; var9 <= var6 * var7; var9 += var6)
+            {
+                var4.startDrawingQuads();
+                var4.addVertex((double)(var8 + 0), (double)var5, (double)(var9 + 0));
+                var4.addVertex((double)(var8 + var6), (double)var5, (double)(var9 + 0));
+                var4.addVertex((double)(var8 + var6), (double)var5, (double)(var9 + var6));
+                var4.addVertex((double)(var8 + 0), (double)var5, (double)(var9 + var6));
+                var4.draw();
+            }
+        }
+
+        GL11.glEndList();
+        this.glSkyList2 = this.starGLCallList + 2;
+        GL11.glNewList(this.glSkyList2, GL11.GL_COMPILE);
+        var5 = -16.0F;
+        var4.startDrawingQuads();
+
+        for (var8 = -var6 * var7; var8 <= var6 * var7; var8 += var6)
+        {
+            for (var9 = -var6 * var7; var9 <= var6 * var7; var9 += var6)
+            {
+                var4.addVertex((double)(var8 + var6), (double)var5, (double)(var9 + 0));
+                var4.addVertex((double)(var8 + 0), (double)var5, (double)(var9 + 0));
+                var4.addVertex((double)(var8 + 0), (double)var5, (double)(var9 + var6));
+                var4.addVertex((double)(var8 + var6), (double)var5, (double)(var9 + var6));
+            }
+        }
+
+        var4.draw();
+        GL11.glEndList();
+    }
+
+
+    /**
+     * Updates the entity renderer
+     */
+    public void updateRenderer()
+    {
+        this.updateFovModifierHand();
+        this.thirdPersonDistanceTemp = this.thirdPersonDistance;
+        this.prevDebugCamYaw = this.debugCamYaw;
+        this.prevDebugCamPitch = this.debugCamPitch;
+        this.prevDebugCamFOV = this.debugCamFOV;
+        this.prevCamRoll = this.camRoll;
+        float var1;
+        float var2;
+
+        if (this.ttw.gameSettings.smoothCamera)
+        {
+            var1 = this.ttw.gameSettings.mouseSensitivity * 0.6F + 0.2F;
+            var2 = var1 * var1 * var1 * 8.0F;
+            this.smoothCamFilterX = this.mouseFilterXAxis.smooth(this.smoothCamYaw, 0.05F * var2);
+            this.smoothCamFilterY = this.mouseFilterYAxis.smooth(this.smoothCamPitch, 0.05F * var2);
+            this.smoothCamPartialTicks = 0.0F;
+            this.smoothCamYaw = 0.0F;
+            this.smoothCamPitch = 0.0F;
+        }
+
+        if (this.ttw.renderViewEntity == null)
+        {
+            this.ttw.renderViewEntity = this.ttw.thePlayer;
+        }
+
+        var1 = this.ttw.theWorld.getLightBrightness(MathHelper.floor_double(this.ttw.renderViewEntity.posX), MathHelper.floor_double(this.ttw.renderViewEntity.posY), MathHelper.floor_double(this.ttw.renderViewEntity.posZ));
+        var2 = (float)2 / 16.0F;
+        this.itemRenderer.updateEquippedItem();
+     
+    }
+
+    /**
+     * Finds what TerrainObject or object the mouse is over at the specified partial tick time. Args: partialTickTime
+     */
+    public void getMouseOver(float p_78473_1_)
+    {
+        if (this.ttw.renderViewEntity != null)
+        {
+            if (this.ttw.theWorld != null)
+            {
+                this.ttw.pointedEntity = null;
+                double var2 = (double)this.ttw.playerController.getTerrainObjectReachDistance();
+                this.ttw.objectMouseOver = this.ttw.renderViewEntity.rayTrace(var2, p_78473_1_);
+                double var4 = var2;
+                Vec3 var6 = this.ttw.renderViewEntity.getPosition(p_78473_1_);
+
+                if (this.ttw.playerController.extendedReach())
+                {
+                    var2 = 6.0D;
+                    var4 = 6.0D;
+                }
+                else
+                {
+                    if (var2 > 3.0D)
+                    {
+                        var4 = 3.0D;
+                    }
+
+                    var2 = var4;
+                }
+
+                if (this.ttw.objectMouseOver != null)
+                {
+                    var4 = this.ttw.objectMouseOver.hitVec.distanceTo(var6);
+                }
+
+                Vec3 var7 = this.ttw.renderViewEntity.getLook(p_78473_1_);
+                Vec3 var8 = var6.addVector(var7.xCoord * var2, var7.yCoord * var2, var7.zCoord * var2);
+                this.pointedEntity = null;
+                Vec3 var9 = null;
+                float thisplayer = 1.0F;
+                List var11 = this.ttw.theWorld.getEntitiesWithinAABBExcludingEntity(this.ttw.renderViewEntity, this.ttw.renderViewEntity.boundingBox.addCoord(var7.xCoord * var2, var7.yCoord * var2, var7.zCoord * var2).expand((double)thisplayer, (double)thisplayer, (double)thisplayer));
+                double var12 = var4;
+
+                for (int var14 = 0; var14 < var11.size(); ++var14)
+                {
+                    Entity var15 = (Entity)var11.get(var14);
+
+                    if (var15.canBeCollidedWith())
+                    {
+                        float var16 = var15.getCollisionBorderSize();
+                        AxisAlignedBB var17 = var15.boundingBox.expand((double)var16, (double)var16, (double)var16);
+                        MovingObjectPosition var18 = var17.calculateIntercept(var6, var8);
+
+                        if (var17.isVecInside(var6))
+                        {
+                            if (0.0D < var12 || var12 == 0.0D)
+                            {
+                                this.pointedEntity = var15;
+                                var9 = var18 == null ? var6 : var18.hitVec;
+                                var12 = 0.0D;
+                            }
+                        }
+                        else if (var18 != null)
+                        {
+                            double var19 = var6.distanceTo(var18.hitVec);
+
+                            if (var19 < var12 || var12 == 0.0D)
+                            {
+                                if (var15 == this.ttw.renderViewEntity.ridingEntity)
+                                {
+                                    if (var12 == 0.0D)
+                                    {
+                                        this.pointedEntity = var15;
+                                        var9 = var18.hitVec;
+                                    }
+                                }
+                                else
+                                {
+                                    this.pointedEntity = var15;
+                                    var9 = var18.hitVec;
+                                    var12 = var19;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (this.pointedEntity != null && (var12 < var4 || this.ttw.objectMouseOver == null))
+                {
+                    this.ttw.objectMouseOver = new MovingObjectPosition(this.pointedEntity, var9);
+
+                    if (this.pointedEntity instanceof EntityLivingBase)
+                    {
+                        this.ttw.pointedEntity = this.pointedEntity;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Update FOV modifier hand
+     */
+    private void updateFovModifierHand()
+    {
+        EntityPlayerSP var1 = (EntityPlayerSP)this.ttw.renderViewEntity;
+        this.fovMultiplierTemp = var1.getFOVMultiplier();
+        this.fovModifierHandPrev = this.fovModifierHand;
+        this.fovModifierHand += (this.fovMultiplierTemp - this.fovModifierHand) * 0.5F;
+
+        if (this.fovModifierHand > 1.5F)
+        {
+            this.fovModifierHand = 1.5F;
+        }
+
+        if (this.fovModifierHand < 0.1F)
+        {
+            this.fovModifierHand = 0.1F;
+        }
+    }
+
+    /**
+     * Changes the field of view of the player depending on if they are underwater or not
+     */
+    private float getFOVModifier(float p_78481_1_, boolean p_78481_2_)
+    {
+        if (this.debugViewDirection > 0)
+        {
+            return 90.0F;
+        }
+        else
+        {
+            EntityPlayer var3 = (EntityPlayer)this.ttw.renderViewEntity;
+            float var4 = 70.0F;
+
+            if (p_78481_2_)
+            {
+                var4 = this.ttw.gameSettings.fovSetting;
+                var4 *= this.fovModifierHandPrev + (this.fovModifierHand - this.fovModifierHandPrev) * p_78481_1_;
+            }
+
+            if (var3.getHealth() <= 0.0F)
+            {
+                float renderWorld = (float)var3.deathTime + p_78481_1_;
+                var4 /= (1.0F - 500.0F / (renderWorld + 500.0F)) * 2.0F + 1.0F;
+            }
+            return var4 + this.prevDebugCamFOV + (this.debugCamFOV - this.prevDebugCamFOV) * p_78481_1_;
+        }
+    }
+
+    private void hurtCameraEffect(float p_78482_1_)
+    {
+        EntityLivingBase var2 = this.ttw.renderViewEntity;
+        float var3 = (float)var2.hurtTime - p_78482_1_;
+        float var4;
+
+        if (var2.getHealth() <= 0.0F)
+        {
+            var4 = (float)var2.deathTime + p_78482_1_;
+            GL11.glRotatef(40.0F - 8000.0F / (var4 + 200.0F), 0.0F, 0.0F, 1.0F);
+        }
+
+        if (var3 >= 0.0F)
+        {
+            var3 /= (float)var2.maxHurtTime;
+            var3 = MathHelper.sin(var3 * var3 * var3 * var3 * (float)Math.PI);
+            var4 = var2.attackedAtYaw;
+            GL11.glRotatef(-var4, 0.0F, 1.0F, 0.0F);
+            GL11.glRotatef(-var3 * 14.0F, 0.0F, 0.0F, 1.0F);
+            GL11.glRotatef(var4, 0.0F, 1.0F, 0.0F);
+        }
+    }
+
+  
+    /**
+     * sets up player's eye (or camera in third person mode)
+     */
+    private void orientCamera(float p_78467_1_)
+    {
+        EntityLivingBase var2 = this.ttw.renderViewEntity;
+        float var3 = var2.eyeOffset - 1.62F;
+        double var4 = var2.prevPosX + (var2.posX - var2.prevPosX) * (double)p_78467_1_;
+        double var6 = var2.prevPosY + (var2.posY - var2.prevPosY) * (double)p_78467_1_ - (double)var3;
+        double var8 = var2.prevPosZ + (var2.posZ - var2.prevPosZ) * (double)p_78467_1_;
+        GL11.glRotatef(this.prevCamRoll + (this.camRoll - this.prevCamRoll) * p_78467_1_, 0.0F, 0.0F, 1.0F);
+
+        if (this.ttw.gameSettings.thirdPersonView > 0)
+        {
+            double var27 = (double)(this.thirdPersonDistanceTemp + (this.thirdPersonDistance - this.thirdPersonDistanceTemp) * p_78467_1_);
+            float var13;
+            float var28;
+
+            if (this.ttw.gameSettings.debugCamEnable)
+            {
+                var28 = this.prevDebugCamYaw + (this.debugCamYaw - this.prevDebugCamYaw) * p_78467_1_;
+                var13 = this.prevDebugCamPitch + (this.debugCamPitch - this.prevDebugCamPitch) * p_78467_1_;
+                GL11.glTranslatef(0.0F, 0.0F, (float)(-var27));
+                GL11.glRotatef(var13, 1.0F, 0.0F, 0.0F);
+                GL11.glRotatef(var28, 0.0F, 1.0F, 0.0F);
+            }
+            else
+            {
+                var28 = var2.rotationYaw;
+                var13 = var2.rotationPitch;
+
+                if (this.ttw.gameSettings.thirdPersonView == 2)
+                {
+                    var13 += 180.0F;
+                }
+
+                double var14 = (double)(-MathHelper.sin(var28 / 180.0F * (float)Math.PI) * MathHelper.cos(var13 / 180.0F * (float)Math.PI)) * var27;
+                double var16 = (double)(MathHelper.cos(var28 / 180.0F * (float)Math.PI) * MathHelper.cos(var13 / 180.0F * (float)Math.PI)) * var27;
+                double var18 = (double)(-MathHelper.sin(var13 / 180.0F * (float)Math.PI)) * var27;
+
+                for (int var20 = 0; var20 < 8; ++var20)
+                {
+                    float var21 = (float)((var20 & 1) * 2 - 1);
+                    float var22 = (float)((var20 >> 1 & 1) * 2 - 1);
+                    float var23 = (float)((var20 >> 2 & 1) * 2 - 1);
+                    var21 *= 0.1F;
+                    var22 *= 0.1F;
+                    var23 *= 0.1F;
+                    MovingObjectPosition var24 = this.ttw.theWorld.rayTraceTerrainObjects(Vec3.createVectorHelper(var4 + (double)var21, var6 + (double)var22, var8 + (double)var23), Vec3.createVectorHelper(var4 - var14 + (double)var21 + (double)var23, var6 - var18 + (double)var22, var8 - var16 + (double)var23));
+
+                    if (var24 != null)
+                    {
+                        double var25 = var24.hitVec.distanceTo(Vec3.createVectorHelper(var4, var6, var8));
+
+                        if (var25 < var27)
+                        {
+                            var27 = var25;
+                        }
+                    }
+                }
+
+                if (this.ttw.gameSettings.thirdPersonView == 2)
+                {
+                    GL11.glRotatef(180.0F, 0.0F, 1.0F, 0.0F);
+                }
+
+                GL11.glRotatef(var2.rotationPitch - var13, 1.0F, 0.0F, 0.0F);
+                GL11.glRotatef(var2.rotationYaw - var28, 0.0F, 1.0F, 0.0F);
+                GL11.glTranslatef(0.0F, 0.0F, (float)(-var27));
+                GL11.glRotatef(var28 - var2.rotationYaw, 0.0F, 1.0F, 0.0F);
+                GL11.glRotatef(var13 - var2.rotationPitch, 1.0F, 0.0F, 0.0F);
+            }
+        }
+        else
+        {
+            GL11.glTranslatef(0.0F, 0.0F, -0.1F);
+        }
+
+        if (!this.ttw.gameSettings.debugCamEnable)
+        {
+            GL11.glRotatef(var2.prevRotationPitch + (var2.rotationPitch - var2.prevRotationPitch) * p_78467_1_, 1.0F, 0.0F, 0.0F);
+            GL11.glRotatef(var2.prevRotationYaw + (var2.rotationYaw - var2.prevRotationYaw) * p_78467_1_ + 180.0F, 0.0F, 1.0F, 0.0F);
+        }
+
+        GL11.glTranslatef(0.0F, var3, 0.0F);
+        var4 = var2.prevPosX + (var2.posX - var2.prevPosX) * (double)p_78467_1_;
+        var6 = var2.prevPosY + (var2.posY - var2.prevPosY) * (double)p_78467_1_ - (double)var3;
+        var8 = var2.prevPosZ + (var2.posZ - var2.prevPosZ) * (double)p_78467_1_;
+        this.cloudFog = true;
+    }
+
+    /**
+     * sets up projection, view effects, camera position/rotation
+     */
+    private void setupCameraTransform(float p_78479_1_, int p_78479_2_)
+    {
+        this.farPlaneDistance = (float)(2 * 16);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glLoadIdentity();
+        float var3 = 0.07F;
+
+        Project.gluPerspective(this.getFOVModifier(p_78479_1_, true), (float)this.ttw.displayWidth / (float)this.ttw.displayHeight, 0.05F, this.farPlaneDistance * 2.0F);
+
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glLoadIdentity();
+
+        this.hurtCameraEffect(p_78479_1_);
+
+        if(this.ttw.thePlayer.setEarthquake > 0)
+        {
+            float var6 = 5.0F / (p_78479_1_ * p_78479_1_ + 5.0F) - p_78479_1_ * 0.04F;
+            var6 *= var6;
+            GL11.glRotatef(((float)p_78479_1_) * 20F, 0.0F, 1.0F, 1.0F);
+            GL11.glScalef(1.0F / var6, 1.0F, 1.0F);
+            GL11.glRotatef(-((float)p_78479_1_) * 20F, 0.0F, 1.0F, 1.0F);
+        }
+
+        this.orientCamera(p_78479_1_);
+
+        if (this.debugViewDirection > 0)
+        {
+            int var7 = this.debugViewDirection - 1;
+
+            if (var7 == 1)
+            {
+                GL11.glRotatef(90.0F, 0.0F, 1.0F, 0.0F);
+            }
+
+            if (var7 == 2)
+            {
+                GL11.glRotatef(180.0F, 0.0F, 1.0F, 0.0F);
+            }
+
+            if (var7 == 3)
+            {
+                GL11.glRotatef(-90.0F, 0.0F, 1.0F, 0.0F);
+            }
+
+            if (var7 == 4)
+            {
+                GL11.glRotatef(90.0F, 1.0F, 0.0F, 0.0F);
+            }
+
+            if (var7 == 5)
+            {
+                GL11.glRotatef(-90.0F, 1.0F, 0.0F, 0.0F);
+            }
+        }
+    }
+
+   
+    
+    /**
+     * Will update any inputs that effect the camera angle (mouse) and then render the world and GUI
+     */
+    public void updateCameraAndRender(float ticker)
+    {
+        boolean var2 = Display.isActive();
+        if (!var2 && this.ttw.gameSettings.pauseOnLostFocus && (!Mouse.isButtonDown(1)))
+        {
+            if (TheStructureWorld.getSystemTime() - this.prevFrameTime > 500L)
+            {
+                this.ttw.displayInGameMenu();
+            }
+        }
+        else
+        {
+            this.prevFrameTime = TheStructureWorld.getSystemTime();
+        }
+        if (this.ttw.inGameHasFocus && var2)
+        {
+            this.ttw.mouseHelper.mouseXYChange();
+            float var3 = this.ttw.gameSettings.mouseSensitivity * 0.6F + 0.2F;
+            float var4 = var3 * var3 * var3 * 8.0F;
+            float renderWorld = (float)this.ttw.mouseHelper.deltaX * var4;
+            float var6 = (float)this.ttw.mouseHelper.deltaY * var4;
+            byte var7 = 1;
+
+            if (this.ttw.gameSettings.invertMouse)
+            {
+                var7 = -1;
+            }
+
+            if (this.ttw.gameSettings.smoothCamera)
+            {
+                this.smoothCamYaw += renderWorld;
+                this.smoothCamPitch += var6;
+                float var8 = ticker - this.smoothCamPartialTicks;
+                this.smoothCamPartialTicks = ticker;
+                renderWorld = this.smoothCamFilterX * var8;
+                var6 = this.smoothCamFilterY * var8;
+                this.ttw.thePlayer.setAngles(renderWorld, var6 * (float)var7);
+            }
+            else
+            {
+                this.ttw.thePlayer.setAngles(renderWorld, var6 * (float)var7);
+            }
+        }
+        if (!this.ttw.skipRenderWorld)
+        {
+            final ScaledResolution var13 = new ScaledResolution(this.ttw, this.ttw.displayWidth, this.ttw.displayHeight);
+            int var14 = var13.getScaledWidth();
+            int var15 = var13.getScaledHeight();
+            final int var16 = Mouse.getX() * var14 / this.ttw.displayWidth;
+            final int var17 = var15 - Mouse.getY() * var15 / this.ttw.displayHeight - 1;
+            if (this.ttw.theWorld != null)
+            {
+            	this.renderWorld(ticker,false);	  
+                this.renderEndNanoTime = System.nanoTime();
+                if (!this.ttw.gameSettings.hideGUI || this.ttw.currentScreen != null)
+                {
+                    GL11.glAlphaFunc(GL11.GL_GREATER, 0.1F);
+                    this.ttw.ingameGUI.renderGameOverlay(ticker, this.ttw.currentScreen != null, var16, var17);
+                }
+            }
+            else
+            {
+                GL11.glViewport(0, 0, this.ttw.displayWidth, this.ttw.displayHeight);
+                GL11.glMatrixMode(GL11.GL_PROJECTION);
+                GL11.glLoadIdentity();
+                GL11.glMatrixMode(GL11.GL_MODELVIEW);
+                GL11.glLoadIdentity();
+                this.setupOverlayRendering();
+                this.renderEndNanoTime = System.nanoTime();
+            }
+
+            if (this.ttw.currentScreen != null )
+            {
+                GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+
+                try
+                {
+                    this.ttw.currentScreen.drawScreen(var16, var17, ticker);
+                }
+                catch (Throwable var12)
+                {
+                    CrashReport thisplayer = CrashReport.makeCrashReport(var12, "Rendering screen");
+                    CrashReportCategory var11 = thisplayer.makeCategory("Screen render details");
+                    var11.addCrashSectionCallable("Screen name", new Callable()
+                    {
+                        public String call()
+                        {
+                            return EntityRenderer.this.ttw.currentScreen.getClass().getCanonicalName();
+                        }
+                    });
+                    var11.addCrashSectionCallable("Mouse location", new Callable()
+                    {
+                        public String call()
+                        {
+                            return String.format("Scaled: (%d, %d). Absolute: (%d, %d)", new Object[] {Integer.valueOf(var16), Integer.valueOf(var17), Integer.valueOf(Mouse.getX()), Integer.valueOf(Mouse.getY())});
+                        }
+                    });
+                    var11.addCrashSectionCallable("Screen size", new Callable()
+                    {
+                        public String call()
+                        {
+                            return String.format("Scaled: (%d, %d). Absolute: (%d, %d). Scale factor of %d", new Object[] {Integer.valueOf(var13.getScaledWidth()), Integer.valueOf(var13.getScaledHeight()), Integer.valueOf(EntityRenderer.this.ttw.displayWidth), Integer.valueOf(EntityRenderer.this.ttw.displayHeight), Integer.valueOf(var13.getScaleFactor())});
+                        }
+                    });
+                    throw new ReportedException(thisplayer);
+                }
+            }
+        }
+    }
+
+    public void overlay(float p_152430_1_)
+    {
+        this.setupOverlayRendering();
+        ScaledResolution var2 = new ScaledResolution(this.ttw, this.ttw.displayWidth, this.ttw.displayHeight);
+    }
+    
+    public static WorldServer serverWorld;
+    public static int onWorldLoaded = 0;
+    public int WindStrengh = 1;
+    
+    public static boolean refreshArea4 = false;
+    public static boolean refreshArea5 = false;
+    public static boolean refreshArea6 = false;
+    public static boolean refreshArea7 = false;
+    public static boolean refreshArea8 = false;
+    public static boolean refreshArea9 = false;
+    public static boolean refreshArea10 = false;
+    public static boolean refreshArea11 = false;
+    public static boolean refreshArea12 = false;
+    
+    
+    
+    /**
+     * Disables GL_LIGHT?, GL_LIGHTING and GL_COLOR_MATERIAL.
+     */
+    public static void disableL0LCM(int light)
+    {
+    	GL11.glDisable(light);
+    	GL11.glDisable(GL11.GL_LIGHTING);
+    	GL11.glDisable(GL11.GL_COLOR_MATERIAL);
+    }
+    
+    public void setupFog(float R,float G,float B,float Density,boolean setFogLight)
+    {
+        FloatBuffer fogColorBuffer = GLAllocation.createDirectFloatBuffer(4);
+        fogColorBuffer.clear();
+    	fogColorBuffer.put(R*0.00392156862745098F).put(G*0.00392156862745098F).put(B*0.00392156862745098F).put(0.1F);
+    	fogColorBuffer.flip();
+    	GL11.glFog(GL11.GL_FOG_COLOR, fogColorBuffer);
+    	if(!setFogLight)
+    	{
+    	GL11.glFogi(GL11.GL_FOG_MODE,GL11.GL_EXP);
+        GL11.glFogf(GL11.GL_FOG_DENSITY, this.ttw.theWorld.StructureWorldInfo.getFogDensity()/Density);
+    	}
+    }
+    
+
+    //MaterialADSS.setColorADS(GL11.GL_LIGHT0,(float)((double)this.allRenderLists.renderAreaX - this.allRenderLists.cameraX)+(150), 0f , (float)((double)this.allRenderLists.renderAreaZ - this.allRenderLists.cameraZ)+188 ,0,0,255,MaterialADSS.WhiteRubber, 0.1F);
+    //EntityRenderer.disableL0LCM();
+    public int updateFog = 0; 
+    public int[] fogColor = {255,255,255};
+    
+	public void renderWorld(float ticker,boolean renderSky)
+    { 
+		EntityLivingBase base = this.ttw.renderViewEntity;
+		GL11.glEnable(GL11.GL_CULL_FACE);
+		GL11.glEnable(GL11.GL_DEPTH_TEST);
+    	this.getMouseOver(ticker);
+        GL11.glViewport(0, 0, this.ttw.displayWidth, this.ttw.displayHeight);
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        this.setupCameraTransform(ticker, 0);
+      	GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GL11.glEnable(GL11.GL_FOG);
+        GL11.glDepthRange(0, 0.001);
+        ++this.updateFog;
+        if(this.serverWorld != null)
+        {
+        IngameMenuAndOptionsGui options = new IngameMenuAndOptionsGui();
+        options.loadorwriteOptions(true);
+        }
+        if(this.serverWorld == null){this.serverWorld = TheStructureWorldServer.getServer().worldServer();}
+        if(this.renderWorld2 == null){this.renderWorld2 = (WorldRenderer)this.worldRenderersToUpdate;}
+        if(this.renderWorld2.terrain == null){RenderTerrain terrain = new RenderTerrain();this.renderWorld2.terrain = terrain;}
+        if(this.updateFog > 5){((EntityPlayer)base).hasMoved = true;} 	
+        if(this.onWorldLoaded <= 10)
+        {
+        	this.renderWorld2.updateTerrain(base);
+        	this.refreshArea4=true;
+        	this.refreshArea5=true;
+        	this.refreshArea6=true;
+        	this.refreshArea7=true;
+        	this.refreshArea8=true;
+        	this.refreshArea9=true;
+        	this.refreshArea10=true;
+        	this.refreshArea11=true;
+        	this.refreshArea12=true; 
+        	this.renderWorld2.renderAreaTerrain(5,this.renderWorld2.ArrayListPlant5,this.renderWorld2.ArrayListStone5,this.renderWorld2.ArrayListTerrain5,base);
+            this.renderWorld2.renderAreaTerrain(6,this.renderWorld2.ArrayListPlant6,this.renderWorld2.ArrayListStone6,this.renderWorld2.ArrayListTerrain6,base);
+            this.renderWorld2.renderAreaTerrain(7,this.renderWorld2.ArrayListPlant7,this.renderWorld2.ArrayListStone7,this.renderWorld2.ArrayListTerrain7,base);
+            this.renderWorld2.renderAreaTerrain(8,this.renderWorld2.ArrayListPlant8,this.renderWorld2.ArrayListStone8,this.renderWorld2.ArrayListTerrain8,base);
+            this.renderWorld2.renderAreaTerrain(9,this.renderWorld2.ArrayListPlant9,this.renderWorld2.ArrayListStone9,this.renderWorld2.ArrayListTerrain9,base);
+            this.renderWorld2.renderAreaTerrain(10,this.renderWorld2.ArrayListPlant10,this.renderWorld2.ArrayListStone10,this.renderWorld2.ArrayListTerrain10,base);
+            this.renderWorld2.renderAreaTerrain(11,this.renderWorld2.ArrayListPlant11,this.renderWorld2.ArrayListStone11,this.renderWorld2.ArrayListTerrain11,base);
+            this.renderWorld2.renderAreaTerrain(12,this.renderWorld2.ArrayListPlant12,this.renderWorld2.ArrayListStone12,this.renderWorld2.ArrayListTerrain12,base);
+            this.renderWorld2.renderAreaTerrain(4,this.renderWorld2.ArrayListPlant4,this.renderWorld2.ArrayListStone4,this.renderWorld2.ArrayListTerrain4,base);
+        	++this.onWorldLoaded;
+        }   
+        this.renderWorld2.renderTestObject(base, 2);
+        if(this.renderWorld2 != null)
+        {
+        this.allRenderLists.setupRenderList(this.renderWorld2.posXMinus, this.renderWorld2.posYMinus, this.renderWorld2.posZMinus, base.lastTickPosX + (base.posX - base.lastTickPosX) * ticker, base.lastTickPosY + (base.posY - base.lastTickPosY) * ticker, base.lastTickPosZ + (base.posZ - base.lastTickPosZ) * ticker);
+        }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        if(this.updateFog > 5||this.serverWorld.StructureWorldInfo.decreaseFog||this.serverWorld.StructureWorldInfo.decreaseFog)
+        {
+        this.setupFog(this.fogColor[0],this.fogColor[1],this.fogColor[2],(this.serverWorld.StructureWorldInfo.WorldFog*0.5F),false);
+        }
+        if(((EntityPlayer)base).hasMoved)
+        {
+        this.moveArea(1, 5, this.renderWorld2.ArrayListTerrain5, this.renderWorld2.ArrayListTerrain6, this.renderWorld2.ArrayListPlant5,this.renderWorld2.ArrayListStone5);
+        this.moveArea(1, 4, this.renderWorld2.ArrayListTerrain4, this.renderWorld2.ArrayListTerrain5, this.renderWorld2.ArrayListPlant4,this.renderWorld2.ArrayListStone4);
+        this.moveArea(1, 6, this.renderWorld2.ArrayListTerrain6, this.renderWorld2.ArrayListTerrain4, this.renderWorld2.ArrayListPlant6,this.renderWorld2.ArrayListStone6);
+
+        this.moveArea(1, 12, this.renderWorld2.ArrayListTerrain12, this.renderWorld2.ArrayListTerrain11, this.renderWorld2.ArrayListPlant12,this.renderWorld2.ArrayListStone12);
+        this.moveArea(1, 7, this.renderWorld2.ArrayListTerrain7, this.renderWorld2.ArrayListTerrain12, this.renderWorld2.ArrayListPlant7,this.renderWorld2.ArrayListStone7);
+        this.moveArea(1, 11, this.renderWorld2.ArrayListTerrain11, this.renderWorld2.ArrayListTerrain7, this.renderWorld2.ArrayListPlant11,this.renderWorld2.ArrayListStone11);
+        
+        this.moveArea(1, 9, this.renderWorld2.ArrayListTerrain9, this.renderWorld2.ArrayListTerrain10, this.renderWorld2.ArrayListPlant9,this.renderWorld2.ArrayListStone9);
+        this.moveArea(1, 8, this.renderWorld2.ArrayListTerrain8, this.renderWorld2.ArrayListTerrain9, this.renderWorld2.ArrayListPlant8,this.renderWorld2.ArrayListStone8);
+        this.moveArea(1, 10, this.renderWorld2.ArrayListTerrain10, this.renderWorld2.ArrayListTerrain8, this.renderWorld2.ArrayListPlant10,this.renderWorld2.ArrayListStone10);
+
+        
+        this.moveArea(2, 6, this.renderWorld2.ArrayListTerrain6, this.renderWorld2.ArrayListTerrain5, this.renderWorld2.ArrayListPlant6,this.renderWorld2.ArrayListStone6);
+        this.moveArea(2, 4, this.renderWorld2.ArrayListTerrain4, this.renderWorld2.ArrayListTerrain6, this.renderWorld2.ArrayListPlant4,this.renderWorld2.ArrayListStone4);
+        this.moveArea(2, 5, this.renderWorld2.ArrayListTerrain5, this.renderWorld2.ArrayListTerrain4, this.renderWorld2.ArrayListPlant5,this.renderWorld2.ArrayListStone5);
+        
+        this.moveArea(2, 11, this.renderWorld2.ArrayListTerrain11, this.renderWorld2.ArrayListTerrain12, this.renderWorld2.ArrayListPlant11,this.renderWorld2.ArrayListStone11);
+        this.moveArea(2, 7, this.renderWorld2.ArrayListTerrain7, this.renderWorld2.ArrayListTerrain11, this.renderWorld2.ArrayListPlant7,this.renderWorld2.ArrayListStone7);
+        this.moveArea(2, 12, this.renderWorld2.ArrayListTerrain12, this.renderWorld2.ArrayListTerrain7, this.renderWorld2.ArrayListPlant12,this.renderWorld2.ArrayListStone12);
+      
+        this.moveArea(2, 10, this.renderWorld2.ArrayListTerrain10, this.renderWorld2.ArrayListTerrain9, this.renderWorld2.ArrayListPlant10,this.renderWorld2.ArrayListStone10);
+        this.moveArea(2, 8, this.renderWorld2.ArrayListTerrain8, this.renderWorld2.ArrayListTerrain10, this.renderWorld2.ArrayListPlant8,this.renderWorld2.ArrayListStone8);
+        this.moveArea(2, 9, this.renderWorld2.ArrayListTerrain9, this.renderWorld2.ArrayListTerrain8, this.renderWorld2.ArrayListPlant9,this.renderWorld2.ArrayListStone9);
+        
+        
+        this.moveArea(3, 8, this.renderWorld2.ArrayListTerrain8, this.renderWorld2.ArrayListTerrain7, this.renderWorld2.ArrayListPlant8,this.renderWorld2.ArrayListStone8);
+        this.renderWorld2.renderSky(250/15D,base,1);
+        }  
+        
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////       
+        int seconds = (int)((float)TheStructureWorld.TheStructureWorld.thePlayer.worldObj.getWorldTime()/100);
+        int hours = (((seconds/60) - (((seconds/60)/24)*24))/2)*17;
+        fogColor = new int[]{hours+55,hours+55,hours+55};
+        MaterialADSS.setColorADS(GL11.GL_LIGHT0,(float)((this.allRenderLists.renderAreaX - this.allRenderLists.cameraX)+base.posX)+20,0 , (float) ((this.allRenderLists.renderAreaZ - this.allRenderLists.cameraZ)+base.posZ)+20,hours+55,hours+55,hours+45,MaterialADSS.WhiteRubber, 0.1F);
+        
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+    	GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+    	GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
+        GL11.glPushMatrix();
+        GL11.glTranslatef((float)(this.allRenderLists.renderAreaX - this.allRenderLists.cameraX), (float)(this.allRenderLists.renderAreaY - this.allRenderLists.cameraY), (float)(this.allRenderLists.renderAreaZ - this.allRenderLists.cameraZ));
+        this.allRenderLists.callList(1);
+
+        if(IngameMenuAndOptionsGui.generateHeightDifference == 0 || IngameMenuAndOptionsGui.generateHeightDifference == 3)
+        {
+        TheStructureWorld.TheStructureWorld.getTextureManager().bindTexture("/objectsanderrain/Ground/Ground Terrain "+IngameMenuAndOptionsGui.basicTerrain+".png",2);  
+        }
+        else if(IngameMenuAndOptionsGui.generateHeightDifference == 1 || IngameMenuAndOptionsGui.generateHeightDifference == 3)
+        {
+        TheStructureWorld.TheStructureWorld.getTextureManager().bindTexture("/objectsanderrain/Ground/Ground Terrain "+IngameMenuAndOptionsGui.basicTerrain+" Height.png",2);  
+        }
+        this.allRenderLists.callListsM(4,13);
+
+        TheStructureWorld.TheStructureWorld.getTextureManager().bindTexture("/objectsanderrain/Ground/Stone Terrain "+IngameMenuAndOptionsGui.stoneTexture+".png",-1);             
+        this.allRenderLists.callListsM(14,23);
+        TheStructureWorld.TheStructureWorld.getTextureManager().bindTexture("/objectsanderrain/Plants "+IngameMenuAndOptionsGui.plantTexture+".png",-1);            
+        
+        this.allRenderLists.callListsM(24,33);
+        this.renderWorld2.plants.randomGrassNummer();
+        if(new String(""+this.renderWorld2.plants.Movement1).contains("0.0")){this.WindStrengh = base.worldObj.WindStrengh;}
+        for(int I=0;I<this.WindStrengh;++I){this.renderWorld2.plants.SwingAnimation1();this.renderWorld2.plants.SwingAnimation2();this.renderWorld2.plants.SwingAnimation3();this.renderWorld2.plants.SwingAnimation4();}
+        this.renderWorld2.renderGrass(base);
+
+        
+        TheStructureWorld.TheStructureWorld.getTextureManager().bindTexture(KeyAndOtherSettings.pictureFile,0);
+        this.allRenderLists.callList(2);
+        GL11.glPopMatrix();
+        
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        GL11.glDisable(GL11.GL_FOG);
+        EntityRenderer.disableL0LCM(GL11.GL_LIGHT0);
+    }
+	//7   8   7
+	//8   7
+	public void moveArea(int side,int areaNumber,List<ArrayListTerrain> listAfter,List<ArrayListTerrain> listTLoad,List<ArrayListTerrain> listPLoad,List<ArrayListTerrain> listSLoad)
+	{
+		EntityLivingBase base = this.ttw.renderViewEntity;
+		boolean refresh;
+		if(side==1&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posX-6) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) && Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) < Integer.parseInt(listAfter.get(0).AreaCode.split("_")[0])){refresh = true;}
+		else if(side==2&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posX+6) > Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) && Integer.parseInt(listAfter.get(0).AreaCode.split("_")[0]) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0])){refresh = true;}
+		else if(side==3&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posZ+6) > Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) && Integer.parseInt(listAfter.get(0).AreaCode.split("_")[0]) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0])){refresh = true;System.out.print("hgfghf");}
+		//else if(side==4&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posZ-6) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) && Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) < Integer.parseInt(listAfter.get(0).AreaCode.split("_")[0])){refresh = true;}
+		else{refresh = false;}
+		if(refresh)
+		{
+		String[] coordsZ = listAfter.get(0).AreaCode.split("_");
+		String[] coordsX = listTLoad.get(0).AreaCode.split("_");
+		
+		
+		
+		
+		
+		if(refresh){if(areaNumber==4){this.renderWorld2.clear4();}else if(areaNumber==5){this.renderWorld2.clear5();}else if(areaNumber==6){this.renderWorld2.clear6();}else if(areaNumber==7){this.renderWorld2.clear7();}else if(areaNumber==8){this.renderWorld2.clear8();}else if(areaNumber==9){this.renderWorld2.clear9();}else if(areaNumber==10){this.renderWorld2.clear10();}else if(areaNumber==11){this.renderWorld2.clear11();}else if(areaNumber==12){this.renderWorld2.clear12();}}
+		List<ArrayListTerrain> ground;List<ArrayListTerrain> plant;List<ArrayListTerrain> stone;
+		if(areaNumber==4)
+		{
+		ground = this.renderWorld2.ArrayListTerrain4;plant = this.renderWorld2.ArrayListPlant4;stone = this.renderWorld2.ArrayListTerrain4;
+		}
+		else if(areaNumber==5)
+		{
+		ground = this.renderWorld2.ArrayListTerrain5;plant = this.renderWorld2.ArrayListPlant5;stone = this.renderWorld2.ArrayListTerrain5;
+		}
+		else if(areaNumber==6)
+		{
+		ground = this.renderWorld2.ArrayListTerrain6;plant = this.renderWorld2.ArrayListPlant6;stone = this.renderWorld2.ArrayListTerrain6;
+		}
+		else if(areaNumber==7)
+		{
+		ground = this.renderWorld2.ArrayListTerrain7;plant = this.renderWorld2.ArrayListPlant7;stone = this.renderWorld2.ArrayListTerrain7;
+		}
+		else if(areaNumber==8)
+		{
+		ground = this.renderWorld2.ArrayListTerrain8;plant = this.renderWorld2.ArrayListPlant8;stone = this.renderWorld2.ArrayListTerrain8;
+		}
+		else if(areaNumber==9)
+		{
+		ground = this.renderWorld2.ArrayListTerrain9;plant = this.renderWorld2.ArrayListPlant9;stone = this.renderWorld2.ArrayListTerrain9;
+		}
+		else if(areaNumber==10)
+		{
+		ground = this.renderWorld2.ArrayListTerrain10;plant = this.renderWorld2.ArrayListPlant10;stone = this.renderWorld2.ArrayListTerrain10;
+		}
+		else if(areaNumber==11)
+		{
+		ground = this.renderWorld2.ArrayListTerrain11;plant = this.renderWorld2.ArrayListPlant11;stone = this.renderWorld2.ArrayListTerrain11;
+		}
+		else if(areaNumber==12)
+		{
+		ground = this.renderWorld2.ArrayListTerrain12;plant = this.renderWorld2.ArrayListPlant12;stone = this.renderWorld2.ArrayListTerrain12;
+		}
+		else{ground = listAfter;plant = listPLoad;stone = listSLoad;}
+		
+		if(side==1){this.renderWorld2.splitIntoAreas(areaNumber,plant,stone,ground,base,base,Integer.parseInt(coordsX[0])-11,(int)base.posY,Integer.parseInt(coordsZ[1]));}
+		else if(side==2){this.renderWorld2.splitIntoAreas(areaNumber,plant,stone,ground,base,base,Integer.parseInt(coordsX[0])+11,(int)base.posY,Integer.parseInt(coordsZ[1]));}
+		else if(side==4){this.renderWorld2.splitIntoAreas(areaNumber,plant,stone,ground,base,base,Integer.parseInt(coordsX[0]),(int)base.posY,Integer.parseInt(coordsZ[1])-11);}
+		else if(side==3){this.renderWorld2.splitIntoAreas(areaNumber,plant,stone,ground,base,base,Integer.parseInt(coordsX[0]),(int)base.posY,Integer.parseInt(coordsZ[1])+11);}
+		this.renderWorld2.renderAreaTerrain(areaNumber,plant,stone,ground,base);
+		}  
+	}
+
+    /**
+     * Setup orthogonal projection for rendering GUI screen overlays
+     */
+    public void setupOverlayRendering()
+    {
+        ScaledResolution var1 = new ScaledResolution(this.ttw, this.ttw.displayWidth, this.ttw.displayHeight);
+        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glLoadIdentity();
+        GL11.glOrtho(0.0D, var1.getScaledWidth_double(), var1.getScaledHeight_double(), 0.0D, 1000.0D, 3000.0D);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glLoadIdentity();
+        GL11.glTranslatef(0.0F, 0.0F, -2000.0F);
+    }
+    
+    /**
+     * set null to clear
+     */
+    public void setWorldAndLoadRenderers(WorldClient wordclient)
+    {
+        if (this.theWorld != null)
+        {
+            this.theWorld.removeWorldAccess(this);
+        }
+        RenderManager.instance.setWorld(wordclient);
+        this.theWorld = wordclient;
+        if (wordclient != null)
+        {
+        	wordclient.addWorldAccess(this);
+            this.loadRenderers();
+        }
+    }
+
+    /**
+     * Loads all the renderers and sets up the basic settings usage
+     */
+    public void loadRenderers()
+    {
+        if (this.theWorld != null)
+        {
+            this.worldRenderers = new WorldRenderer[5 * 16 * 5];
+            int var2 = 0;
+            int var3 = 0;
+            this.tileEntities.clear();
+            this.onStaticEntitiesChanged();
+            for (int X = 0; X < 5; ++X)
+            {
+                for (int Y = 0; Y < 16; ++Y)
+                {
+                    for (int Z = 0; Z < 5; ++Z)
+                    {
+                        this.worldRenderers[(Z * 16 + Y) * 5 + X] = new WorldRenderer(X * 16, Y * 16, Z * 16, this.glRenderListBase + var2);
+                        if (this.occlusionEnabled)
+                        {
+                            this.worldRenderers[(Z * 16 + Y) * 5 + X].glOcclusionQuery = this.glOcclusionQueryBase.get(var3);
+                        }
+                        this.worldRenderers[(Z * 16 + Y) * 5 + X].isWaitingOnOcclusionQuery = false;
+                        this.worldRenderers[(Z * 16 + Y) * 5 + X].isVisible = true;
+                        this.worldRenderers[(Z * 16 + Y) * 5 + X].AreaIndex = var3++;
+                        this.worldRenderersToUpdate = (this.worldRenderers[(Z * 16 + Y) * 5 + X]);
+                        var2 += 3;
+                    }
+                }
+            }
+            this.renderEntitiesStartupCounter = 2;
+        }
+    }
+   
+    public void renderEntities(float timer)
+    {
+            RenderManager.instance.setorchangerenderview(this.theWorld, this.ttw.getTextureManager(), this.ttw.fontRenderer, this.ttw.renderViewEntity, this.ttw.pointedEntity, timer);
+            EntityLivingBase thisplayer = this.ttw.renderViewEntity;
+            double X = thisplayer.lastTickPosX + (thisplayer.posX - thisplayer.lastTickPosX) * (double)timer;
+            double Y = thisplayer.lastTickPosY + (thisplayer.posY - thisplayer.lastTickPosY) * (double)timer;
+            double Z = thisplayer.lastTickPosZ + (thisplayer.posZ - thisplayer.lastTickPosZ) * (double)timer;
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glPushMatrix();
+            GL11.glTranslated(-X, -Y, -Z);
+            GL11.glCallList(this.displayListEntities);
+            GL11.glPopMatrix();
+            for (int EntityListSize = 0; EntityListSize < this.theWorld.loadedEntityList.size(); ++EntityListSize)
+            {
+            	 Entity e = (Entity)this.theWorld.loadedEntityList.get(EntityListSize);
+            	 RenderManager.instance.renderEntity(e, timer,X,Y,Z); 
+            }
+    }
+    
+    public void onStaticEntitiesChanged()
+    {
+        this.displayListEntitiesDirty = true;
+    }
+
+    /**
+     * Marks the TerrainObjects in the given range for update
+     */
+    public void markTerrainObjectsForUpdate(int p_72725_1_, int p_72725_2_, int p_72725_3_, int p_72725_4_, int p_72725_5_, int p_72725_6_)
+    {
+        int var7 = MathHelper.bucketInt(p_72725_1_, 16);
+        int var8 = MathHelper.bucketInt(p_72725_2_, 16);
+        int var9 = MathHelper.bucketInt(p_72725_3_, 16);
+        int thisplayer = MathHelper.bucketInt(p_72725_4_, 16);
+        int var11 = MathHelper.bucketInt(p_72725_5_, 16);
+        int var12 = MathHelper.bucketInt(p_72725_6_, 16);
+
+        for (int var13 = var7; var13 <= thisplayer; ++var13)
+        {
+            int var14 = var13 % 5;
+
+            if (var14 < 0)
+            {
+                var14 += 5;
+            }
+
+            for (int var15 = var8; var15 <= var11; ++var15)
+            {
+                int var16 = var15 % 16;
+
+                if (var16 < 0)
+                {
+                    var16 += 16;
+                }
+
+                for (int var17 = var9; var17 <= var12; ++var17)
+                {
+                    int var18 = var17 % 5;
+
+                    if (var18 < 0)
+                    {
+                        var18 += 5;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * On the client, re-renders the TerrainObject. On the server, sends the TerrainObject to the client (which will re-render it),
+     * including the tile entity description packet if applicable. Args: x, y, z
+     */
+    public void markTerrainObjectForUpdate(int p_147586_1_, int p_147586_2_, int p_147586_3_)
+    {
+        this.markTerrainObjectsForUpdate(p_147586_1_ - 1, p_147586_2_ - 1, p_147586_3_ - 1, p_147586_1_ + 1, p_147586_2_ + 1, p_147586_3_ + 1);
+    }
+
+    /**
+     * On the client, re-renders this TerrainObject. On the server, does nothing. Used for lighting updates.
+     */
+    public void markTerrainObjectForRenderUpdate(int p_147588_1_, int p_147588_2_, int p_147588_3_)
+    {
+        this.markTerrainObjectsForUpdate(p_147588_1_ - 1, p_147588_2_ - 1, p_147588_3_ - 1, p_147588_1_ + 1, p_147588_2_ + 1, p_147588_3_ + 1);
+    }
+
+    /**
+     * On the client, re-renders all TerrainObjects in this range, inclusive. On the server, does nothing. Args: min x, min y,
+     * min z, max x, max y, max z
+     */
+    public void markTerrainObjectRangeForRenderUpdate(int p_147585_1_, int p_147585_2_, int p_147585_3_, int p_147585_4_, int p_147585_5_, int p_147585_6_)
+    {
+        this.markTerrainObjectsForUpdate(p_147585_1_ - 1, p_147585_2_ - 1, p_147585_3_ - 1, p_147585_4_ + 1, p_147585_5_ + 1, p_147585_6_ + 1);
+    }
+
+    
+    /**
+     * Plays the specified sound. Arg: soundName, x, y, z, volume, pitch
+     */
+    public void playSound(String p_72704_1_, double p_72704_2_, double p_72704_4_, double p_72704_6_, float p_72704_8_, float p_72704_9_) {}
+
+    /**
+     * Plays sound to all near players except the player reference given
+     */
+    public void playSoundToNearExcept(EntityPlayer p_85102_1_, String p_85102_2_, double p_85102_3_, double p_85102_5_, double p_85102_7_, float p_85102_9_, float p_85102_10_) {}
+
+  
+
+    /**
+     * Called on all IWorldAccesses when an entity is created or loaded. On client worlds, starts downloading any
+     * necessary textures. On server worlds, adds the entity to the entity tracker.
+     */
+    public void onEntityCreate(Entity p_72703_1_) {}
+
+    /**
+     * Called on all IWorldAccesses when an entity is unloaded or destroyed. On client worlds, releases any downloaded
+     * textures. On server worlds, removes the entity from the entity tracker.
+     */
+    public void onEntityDestroy(Entity p_72709_1_) {}
+
+    /**
+     * Deletes all display lists
+     */
+    public void deleteAllDisplayLists()
+    {
+        GLAllocation.deleteDisplayLists(this.glRenderListBase);
+    }
+
+    public void broadcastSound(int p_82746_1_, int p_82746_2_, int p_82746_3_, int p_82746_4_, int p_82746_5_)
+    {
+        Random var6 = this.theWorld.rand;
+
+        switch (p_82746_1_)
+        {
+            case 1013:
+            case 1018:
+                if (this.ttw.renderViewEntity != null)
+                {
+                    double var7 = (double)p_82746_2_ - this.ttw.renderViewEntity.posX;
+                    double var9 = (double)p_82746_3_ - this.ttw.renderViewEntity.posY;
+                    double var11 = (double)p_82746_4_ - this.ttw.renderViewEntity.posZ;
+                    double var13 = Math.sqrt(var7 * var7 + var9 * var9 + var11 * var11);
+                    double var15 = this.ttw.renderViewEntity.posX;
+                    double var17 = this.ttw.renderViewEntity.posY;
+                    double var19 = this.ttw.renderViewEntity.posZ;
+
+                    if (var13 > 0.0D)
+                    {
+                        var15 += var7 / var13 * 2.0D;
+                        var17 += var9 / var13 * 2.0D;
+                        var19 += var11 / var13 * 2.0D;
+                    }
+
+                    if (p_82746_1_ == 1013)
+                    {
+                        this.theWorld.playSound(var15, var17, var19, "mob.wither.spawn", 1.0F, 1.0F, false);
+                    }
+                    else if (p_82746_1_ == 1018)
+                    {
+                        this.theWorld.playSound(var15, var17, var19, "mob.enderdragon.end", 5.0F, 1.0F, false);
+                    }
+                }
+
+            default:
+        }
+    }
+
+
+
+
+	
+   
+}

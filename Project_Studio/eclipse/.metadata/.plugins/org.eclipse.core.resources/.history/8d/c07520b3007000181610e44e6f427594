@@ -1,0 +1,114 @@
+package nl.thestructureworld.client.renderer.terrain;
+
+import java.util.List;
+
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.shaders.Light;
+import nl.thestructureworld.client.shaders.Matrix;
+import nl.thestructureworld.client.shaders.RawModel;
+import nl.thestructureworld.client.shaders.terrain.TerrainShader;
+
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+
+public class TerrainRenderer 
+{
+	private TerrainShader shader;
+	public int textureblendmap;
+
+	public TerrainRenderer(TerrainShader shader, Matrix4f projectionMatrix) 
+	{
+		this.shader = shader;
+		if(textureblendmap==0)
+		{
+			textureblendmap  = TheStructureWorld.TheStructureWorld.getTextureManager().loadTexture(FileBasicJava.source+"/The Structure World/groundMipmap");
+		}
+		shader.start();
+		shader.loadProjectionMatrix(projectionMatrix);
+		shader.connecttextureUnit();
+		shader.stop();
+	}
+	
+	public void render(List<Terrain> terrains,List<Light> lights,Vector4f vec,int planeType,boolean invert) 
+	{
+		for (Terrain terrain : terrains) 
+		{
+			shader.start();
+			shader.loadSkyColor(EntityRenderer.skyColor,EntityRenderer.fogDensity,EntityRenderer.fogGradient);
+			shader.loadLight(lights);
+			shader.loadPlaneType(planeType);
+			if(vec != null)
+	        {
+	        shader.loadPlane(vec);
+	        shader.loadInvertDot(invert);
+	        }
+			shader.loadViewMatrix();
+			shader.loadSkyColor(EntityRenderer.skyColor,EntityRenderer.fogDensity,EntityRenderer.fogGradient);
+			shader.loadShineVariables(10, 0.1F);
+			GL13.glActiveTexture(GL13.GL_TEXTURE5);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureblendmap);
+			GL13.glActiveTexture(GL13.GL_TEXTURE4);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrain.getTexture().textureblendmap);
+			GL13.glActiveTexture(GL13.GL_TEXTURE3);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrain.getTexture().textureID3);
+			GL13.glActiveTexture(GL13.GL_TEXTURE2);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrain.getTexture().textureID2);
+			GL13.glActiveTexture(GL13.GL_TEXTURE1);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrain.getTexture().textureID);
+			GL13.glActiveTexture(GL13.GL_TEXTURE0);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, terrain.getTexture().texturebackground);
+			if(createModelList==0)
+			{
+			GL11.glNewList(111, GL11.GL_COMPILE);
+			GL11.glEnable(GL11.GL_CULL_FACE);
+			GL30.glBindVertexArray(terrain.getTexture().rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTextureRepeating(terrain.getTexture().repeat);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x, terrain.y, terrain.z), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x+10, terrain.y, terrain.z), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x-10, terrain.y, terrain.z), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x, terrain.y, terrain.z+10), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x, terrain.y, terrain.z-10), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x+10, terrain.y, terrain.z-10), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x-10, terrain.y, terrain.z+10), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x-10, terrain.y, terrain.z-10), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.x+10, terrain.y, terrain.z+10), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES, terrain.getTexture().rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL20.glDisableVertexAttribArray(0);
+			GL20.glDisableVertexAttribArray(1);
+			GL20.glDisableVertexAttribArray(2);
+			GL30.glBindVertexArray(0);
+			GL11.glEndList();
+			++this.createModelList;
+			}
+			else
+			{
+			GL11.glCallList(111);
+			}
+			
+			TheStructureWorld.TheStructureWorld.getTextureManager().loadMipmap(2, true);
+			GL11.glDisable(GL11.GL_CULL_FACE);
+			shader.stop();
+		}
+	}
+	
+	
+	public int createModelList = 0;
+}

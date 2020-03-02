@@ -1,0 +1,683 @@
+package nl.thestructureworld.client.multiplayer;
+
+import io.netty.util.concurrent.GenericFutureListener;
+
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+
+import nl.thestructureworld.client.GameProfile;
+import nl.thestructureworld.client.GameSettings;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.gui.DisconnectedGui;
+import nl.thestructureworld.client.gui.MainMenuGui;
+import nl.thestructureworld.client.gui.GuiScreen;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityClientPlayerMP;
+import nl.thestructureworld.entity.EntityList;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.network.play.client.C00PacketKeepAlive;
+import nl.thestructureworld.network.play.client.C03PacketPlayer;
+import nl.thestructureworld.network.play.client.C0FPacketConfirmTransaction;
+import nl.thestructureworld.network.play.client.C17PacketCustomPayload;
+import nl.thestructureworld.network.play.client.EnumConnectionState;
+import nl.thestructureworld.network.play.client.INetHandlerPlayClient;
+import nl.thestructureworld.network.play.client.NetworkManager;
+import nl.thestructureworld.network.play.client.Packet;
+import nl.thestructureworld.network.play.client.S00PacketKeepAlive;
+import nl.thestructureworld.network.play.client.S01PacketJoinGame;
+import nl.thestructureworld.network.play.client.S03PacketTimeUpdate;
+import nl.thestructureworld.network.play.client.S04PacketEntityEquipment;
+import nl.thestructureworld.network.play.client.S05PacketSpawnPosition;
+import nl.thestructureworld.network.play.client.S06PacketUpdateHealth;
+import nl.thestructureworld.network.play.client.S07PacketRespawn;
+import nl.thestructureworld.network.play.client.S08PacketPlayerPosLook;
+import nl.thestructureworld.network.play.client.S09PacketHeldItemChange;
+import nl.thestructureworld.network.play.client.S0BPacketAnimation;
+import nl.thestructureworld.network.play.client.S0CPacketSpawnPlayer;
+import nl.thestructureworld.network.play.client.S0DPacketCollectItem;
+import nl.thestructureworld.network.play.client.S0EPacketSpawnObject;
+import nl.thestructureworld.network.play.client.S12PacketEntityVelocity;
+import nl.thestructureworld.network.play.client.S13PacketDestroyEntities;
+import nl.thestructureworld.network.play.client.S14PacketEntity;
+import nl.thestructureworld.network.play.client.S18PacketEntityTeleport;
+import nl.thestructureworld.network.play.client.S19PacketEntityHeadLook;
+import nl.thestructureworld.network.play.client.S19PacketEntityStatus;
+import nl.thestructureworld.network.play.client.S1BPacketEntityAttach;
+import nl.thestructureworld.network.play.client.S1CPacketEntityMetadata;
+import nl.thestructureworld.network.play.client.S21PacketAreaData;
+import nl.thestructureworld.network.play.client.S22PacketMultiTerrainObjectChange;
+import nl.thestructureworld.network.play.client.S23PacketTerrainObjectChange;
+import nl.thestructureworld.network.play.client.S26PacketMapAreaBulk;
+import nl.thestructureworld.network.play.client.S27PacketExplosion;
+import nl.thestructureworld.network.play.client.S28PacketEffect;
+import nl.thestructureworld.network.play.client.S29PacketSoundEffect;
+import nl.thestructureworld.network.play.client.S2BPacketChangeGameState;
+import nl.thestructureworld.network.play.client.S2DPacketOpenWindow;
+import nl.thestructureworld.network.play.client.S2EPacketCloseWindow;
+import nl.thestructureworld.network.play.client.S2FPacketSetSlot;
+import nl.thestructureworld.network.play.client.S30PacketWindowItems;
+import nl.thestructureworld.network.play.client.S31PacketWindowProperty;
+import nl.thestructureworld.network.play.client.S32PacketConfirmTransaction;
+import nl.thestructureworld.network.play.client.S38PacketPlayerListItem;
+import nl.thestructureworld.network.play.client.S39PacketPlayerAbilities;
+import nl.thestructureworld.network.play.client.S3FPacketCustomPayload;
+import nl.thestructureworld.network.play.client.S40PacketDisconnect;
+import nl.thestructureworld.util.AreaCoordinates;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.world.WorldProvider;
+import nl.thestructureworld.world.WorldSettings;
+import nl.thestructureworld.world.storage.Area;
+import nl.thestructureworld.world.storage.ISaveHandler;
+import nl.thestructureworld.world.storage.MapStorage;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.common.base.Charsets;
+
+public class NetHandlerPlayClient implements INetHandlerPlayClient
+{
+    private static final Logger logger = LogManager.getLogger();
+
+    /**
+     * The NetworkManager instance used to communicate with the server (used only by handlePlayerPosLook to update
+     * positioning and handleJoinGame to inform the server of the client distribution/mods)
+     */
+    private final NetworkManager netManager;
+
+    /**
+     * Reference to the TheStructureWorld instance, which many handler methods operate on
+     */
+    private TheStructureWorld gameController;
+
+    /**
+     * Reference to the current ClientWorld instance, which many handler methods operate on
+     */
+    private WorldClient clientWorldController;
+
+    /**
+     * True if the client has finished downloading terrain and may spawn. Set upon receipt of S08PacketPlayerPosLook,
+     * reset upon respawning
+     */
+    private boolean doneLoadingTerrain;
+
+    /**
+     * Origin of the central MapStorage serving as a public reference for WorldClient. Not used in this class
+     */
+    public MapStorage mapStorageOrigin = new MapStorage((ISaveHandler)null);
+
+    /**
+     * A mapping from player names to their respective GuiPlayerInfo (specifies the clients response time to the server)
+     */
+    private Map playerInfoMap = new HashMap();
+
+    /**
+     * An ArrayList of GuiPlayerInfo (includes all the players' GuiPlayerInfo on the current server)
+     */
+    public List playerInfoList = new ArrayList();
+    public int currentServerMaxPlayers = 20;
+
+    /**
+     * Seems to be either null (integrated server) or an instance of either GuiMultiplayer (when connecting to a server)
+     * or GuiScreenReamlsTOS (when connecting to tswO server)
+     */
+    private GuiScreen guiScreenServer;
+    private boolean field_147308_k = false;
+
+    /**
+     * Just an ordinary random number generator, used to randomize audio pitch of item/orb pickup and randomize both
+     * particlespawn offset and velocity
+     */
+    private Random avRandomizer = new Random();
+
+    public NetHandlerPlayClient(TheStructureWorld funci_i45061_1_, GuiScreen funci_i45061_2_, NetworkManager funci_i45061_3_)
+    {
+        this.gameController = funci_i45061_1_;
+        this.guiScreenServer = funci_i45061_2_;
+        this.netManager = funci_i45061_3_;
+    }
+
+    /**
+     * Clears the WorldClient instance associated with this NetHandlerPlayClient
+     */
+    public void cleanup()
+    {
+        this.clientWorldController = null;
+    }
+
+    /**
+     * For scheduled network tasks. Used in NetHandlerPlayServer to send keep-alive packets and in NetHandlerLoginServer
+     * for a login-timeout
+     */
+    public void onNetworkTick() {}
+
+    /**
+     * Registers some server properties (gametype,hardcore-mode,terraintype,difficulty,player limit), creates a new
+     * WorldClient and sets the player initial dimension
+     */
+    public void handleJoinGame(S01PacketJoinGame joinPacket)
+    {
+        this.gameController.playerController = new PlayerControllerMP(this.gameController, this);
+        this.clientWorldController = new WorldClient(this, new WorldSettings(joinPacket.info), joinPacket.getDifficulty());
+        this.clientWorldController.isClient = true;
+        this.gameController.loadWorld(this.clientWorldController);
+        this.gameController.thePlayer.setEntityId(joinPacket.getID());
+        this.currentServerMaxPlayers = joinPacket.tsw_funci_149193_h();
+        this.gameController.playerController.setGameType(joinPacket.getGameType());
+        this.gameController.gameSettings.sendSettingsToServer();
+        this.netManager.scheduleOutboundPacket(new C17PacketCustomPayload("Brand", new String("vanilla").getBytes(Charsets.UTF_8)), new GenericFutureListener[0]);
+    }
+
+    /**
+     * Spawns an instance of the objecttype indicated by the packet and sets its position and momentum
+     */
+    @SuppressWarnings("unused")
+	public void handleSpawnObject(S0EPacketSpawnObject spawnentity)
+    {
+        double x = (double)spawnentity.getX() / 32.0D;
+        double y = (double)spawnentity.getY() / 32.0D;
+        double z = (double)spawnentity.getZ() / 32.0D;
+        Object var8 = null;
+
+        if (var8 != null)
+        {
+            ((Entity)var8).serverPosX = spawnentity.getX();
+            ((Entity)var8).serverPosY = spawnentity.getY();
+            ((Entity)var8).serverPosZ = spawnentity.getZ();
+            ((Entity)var8).rotationPitch = (float)(spawnentity.getPitch() * 360) / 256.0F;
+            ((Entity)var8).rotationYaw = (float)(spawnentity.getRotation() * 360) / 256.0F;
+            ((Entity)var8).setEntityId(spawnentity.getID());
+            this.clientWorldController.spawnEntityToWorld(spawnentity.getID(), (Entity)var8);
+        }
+    }
+
+
+    /**
+     * Sets the velocity of the specified entity to the specified value
+     */
+    public void handleEntityVelocity(S12PacketEntityVelocity funci_147244_1_)
+    {
+        Entity var2 = this.clientWorldController.getEntityByID(funci_147244_1_.tsw_funci_149412_c());
+
+        if (var2 != null)
+        {
+            var2.setVelocity((double)funci_147244_1_.tsw_funci_149411_d() / 8000.0D, (double)funci_147244_1_.tsw_funci_149410_e() / 8000.0D, (double)funci_147244_1_.tsw_funci_149409_f() / 8000.0D);
+        }
+    }
+
+    /**
+     * Invoked when the server registers new proximate objects in your watchlist or when objects in your watchlist have
+     * changed -> Registers any changes locally
+     */
+    public void handleEntityMetadata(S1CPacketEntityMetadata funci_147284_1_)
+    {
+
+    }
+
+    /**
+     * Handles the creation of a nearby player entity, sets the position and held item
+     */
+    public void handleSpawnPlayer(S0CPacketSpawnPlayer funci_147237_1_)
+    {
+       
+    }
+
+    /**
+     * Updates an entity's position and rotation as specified by the packet
+     */
+    public void handleEntityTeleport(S18PacketEntityTeleport funci_147275_1_)
+    {
+        Entity var2 = this.clientWorldController.getEntityByID(funci_147275_1_.tsw_funci_149451_c());
+
+        if (var2 != null)
+        {
+            var2.serverPosX = funci_147275_1_.tsw_funci_149449_d();
+            var2.serverPosY = funci_147275_1_.tsw_funci_149448_e();
+            var2.serverPosZ = funci_147275_1_.tsw_funci_149446_f();
+            double var3 = (double)var2.serverPosX / 32.0D;
+            double var5 = (double)var2.serverPosY / 32.0D + 0.015625D;
+            double var7 = (double)var2.serverPosZ / 32.0D;
+            float var9 = (float)(funci_147275_1_.tsw_funci_149450_g() * 360) / 256.0F;
+            float var10 = (float)(funci_147275_1_.tsw_funci_149447_h() * 360) / 256.0F;
+            var2.setPositionAndRotation(var3, var5, var7, var9, var10, 3);
+        }
+    }
+
+    /**
+     * Updates which hotbar slot of the player is currently selected
+     */
+    public void handleHeldItemChange(S09PacketHeldItemChange funci_147257_1_)
+    {
+       
+    }
+
+    /**
+     * Updates the specified entity's position by the specified relative moment and absolute rotation. Note that
+     * subclassing of the packet allows for the specification of a subset of this data (e.g. only rel. position, abs.
+     * rotation or both).
+     */
+    public void handleEntityMovement(S14PacketEntity funci_147259_1_)
+    {
+        Entity var2 = funci_147259_1_.tsw_funci_149065_a(this.clientWorldController);
+
+        if (var2 != null)
+        {
+            var2.serverPosX += funci_147259_1_.tsw_funci_149062_c();
+            var2.serverPosY += funci_147259_1_.tsw_funci_149061_d();
+            var2.serverPosZ += funci_147259_1_.tsw_funci_149064_e();
+            double var3 = (double)var2.serverPosX / 32.0D;
+            double var5 = (double)var2.serverPosY / 32.0D;
+            double var7 = (double)var2.serverPosZ / 32.0D;
+            float var9 = funci_147259_1_.tsw_funci_149060_h() ? (float)(funci_147259_1_.tsw_funci_149066_f() * 360) / 256.0F : var2.rotationYaw;
+            float var10 = funci_147259_1_.tsw_funci_149060_h() ? (float)(funci_147259_1_.tsw_funci_149063_g() * 360) / 256.0F : var2.rotationPitch;
+            var2.setPositionAndRotation(var3, var5, var7, var9, var10, 3);
+        }
+    }
+
+    /**
+     * Updates the direction in which the specified entity is looking, normally this head rotation is independent of the
+     * rotation of the entity itself
+     */
+    public void handleEntityHeadLook(S19PacketEntityHeadLook funci_147267_1_)
+    {
+        Entity var2 = funci_147267_1_.tsw_funci_149381_a(this.clientWorldController);
+
+        if (var2 != null)
+        {
+            float var3 = (float)(funci_147267_1_.tsw_funci_149380_c() * 360) / 256.0F;
+            var2.setRotationYawHead(var3);
+        }
+    }
+
+    /**
+     * Locally eliminates the entities. Invoked by the server when the items are in fact destroyed, or the player is no
+     * longer registered as required to monitor them. The latter  happens when distance between the player and item
+     * increases beyond a certain treshold (typically the viewing distance)
+     */
+    public void handleDestroyEntities(S13PacketDestroyEntities funci_147238_1_)
+    {
+        for (int var2 = 0; var2 < funci_147238_1_.tsw_funci_149098_c().length; ++var2)
+        {
+            this.clientWorldController.removeEntityFromWorld(funci_147238_1_.tsw_funci_149098_c()[var2]);
+        }
+    }
+
+    /**
+     * Handles changes in player positioning and rotation such as (re)spawning etc. 
+     * Seems to immediately reply to the server with the clients post-processing perspective on the
+     * player positioning
+     */
+    public void handlePlayerPosLook(S08PacketPlayerPosLook funci_147258_1_)
+    {
+        EntityClientPlayerMP var2 = this.gameController.thePlayer;
+        double var3 = funci_147258_1_.tsw_funci_148932_c();
+        double var5 = funci_147258_1_.tsw_funci_148928_d();
+        double var7 = funci_147258_1_.tsw_funci_148933_e();
+        float var9 = funci_147258_1_.tsw_funci_148931_f();
+        float var10 = funci_147258_1_.tsw_funci_148930_g();
+        var2.motionX = var2.motionY = var2.motionZ = 0.0D;
+        var2.setPositionAndRotation(var3, var5, var7, var9, var10);
+        this.netManager.scheduleOutboundPacket(new C03PacketPlayer.C06PacketPlayerPosLook(var2.posX, var2.boundingBox.minY, var2.posY, var2.posZ, funci_147258_1_.tsw_funci_148931_f(), funci_147258_1_.tsw_funci_148930_g(), funci_147258_1_.tsw_funci_148929_h()), new GenericFutureListener[0]);
+
+        if (!this.doneLoadingTerrain)
+        {
+            this.gameController.thePlayer.prevPosX = this.gameController.thePlayer.posX;
+            this.gameController.thePlayer.prevPosY = this.gameController.thePlayer.posY;
+            this.gameController.thePlayer.prevPosZ = this.gameController.thePlayer.posZ;
+            this.doneLoadingTerrain = true;
+            this.gameController.displayGuiScreen((GuiScreen)null);
+        }
+    }
+
+    /**
+     * Received from the servers PlayerManager if between 1 and 64 BasicEntityRender in a Area are changed. If only one TerrainObject
+     * requires an update, the server sends S23PacketTerrainObjectChange and if 64 or more BasicEntityRender are changed, the server sends
+     * S21PacketAreaData
+     */
+    public void handleMultiTerrainObjectChange(S22PacketMultiTerrainObjectChange funci_147287_1_)
+    {
+        int var2 = funci_147287_1_.tsw_funci_148920_c().AreaXPos * 16;
+        int var3 = funci_147287_1_.tsw_funci_148920_c().AreaZPos * 16;
+
+        if (funci_147287_1_.tsw_funci_148921_d() != null)
+        {
+            DataInputStream var4 = new DataInputStream(new ByteArrayInputStream(funci_147287_1_.tsw_funci_148921_d()));
+        }
+    }
+
+    /**
+     * Updates the specified Area with the supplied data, marks it for re-rendering and lighting recalculation
+     */
+    public void handleAreaData(S21PacketAreaData funci_147263_1_)
+    {
+        if (funci_147263_1_.tsw_funci_149274_i())
+        {
+            if (funci_147263_1_.tsw_funci_149276_g() == 0)
+            {
+                this.clientWorldController.doPreArea(funci_147263_1_.tsw_funci_149273_e(),151, funci_147263_1_.tsw_funci_149271_f(), false);
+                return;
+            }
+
+            this.clientWorldController.doPreArea(funci_147263_1_.tsw_funci_149273_e(), 151,funci_147263_1_.tsw_funci_149271_f(), true);
+        }
+
+        this.clientWorldController.invalidateTerrainObjectReceiveRegion(funci_147263_1_.tsw_funci_149273_e() << 4, 0, funci_147263_1_.tsw_funci_149271_f() << 4, (funci_147263_1_.tsw_funci_149273_e() << 4) + 15, 256, (funci_147263_1_.tsw_funci_149271_f() << 4) + 15);
+        Area var2 = this.clientWorldController.getAreaFromAreaCoords(funci_147263_1_.tsw_funci_149273_e(), funci_147263_1_.tsw_funci_149271_f());
+        var2.fillArea(funci_147263_1_.tsw_funci_149272_d(), funci_147263_1_.tsw_funci_149276_g(), funci_147263_1_.tsw_funci_149270_h(), funci_147263_1_.tsw_funci_149274_i());
+       
+        if (!funci_147263_1_.tsw_funci_149274_i() || !(this.clientWorldController.provider instanceof WorldProvider))
+        {
+            var2.resetRelightChecks();
+        }
+    }
+
+    /**
+     * Updates the TerrainObject and metadata and generates a TerrainObjectupdate (and notify the clients)
+     */
+    public void handleTerrainObjectChange(S23PacketTerrainObjectChange packet)
+    {
+  
+    }
+
+    /**
+     * Closes the network channel
+     */
+    public void handleDisconnect(S40PacketDisconnect funci_147253_1_)
+    {
+        this.netManager.closeChannel(funci_147253_1_.tsw_funci_149165_c());
+    }
+
+    /**
+     * Invoked when disconnecting, the parameter is a ChatComponent describing the reason for termination
+     */
+    public void onDisconnect(String funci_147231_1_)
+    {
+        this.gameController.loadWorld((WorldClient)null);
+
+        if (this.guiScreenServer != null)
+        {
+                this.gameController.displayGuiScreen(new DisconnectedGui(this.guiScreenServer, "Connection lost", funci_147231_1_));
+        }
+        else
+        {
+            //this.gameController.displayGuiScreen(new DisconnectedGui(new GuiMultiplayer(new MainMenuGui()), "Connection lost", funci_147231_1_));
+        }
+    }
+
+    public void addToSendQueue(Packet funci_147297_1_)
+    {
+        this.netManager.scheduleOutboundPacket(funci_147297_1_, new GenericFutureListener[0]);
+    }
+
+    public void handleCollectItem(S0DPacketCollectItem funci_147246_1_)
+    {
+        Entity var2 = this.clientWorldController.getEntityByID(funci_147246_1_.tsw_funci_149354_c());
+        Object var3 = (EntityLivingBase)this.clientWorldController.getEntityByID(funci_147246_1_.tsw_funci_149353_d());
+
+        if (var3 == null)
+        {
+            var3 = this.gameController.thePlayer;
+        }
+
+        if (var2 != null)
+        {
+        	this.clientWorldController.removeEntityFromWorld(funci_147246_1_.tsw_funci_149354_c());
+        }
+    }
+
+  
+    /**
+     * Renders a specified animation: Waking up a player, a living entity swinging its currently held item, being hurt
+     * or receiving a critical hit by normal or magical means
+     */
+    public void handleAnimation(S0BPacketAnimation funci_147279_1_)
+    {
+        Entity var2 = this.clientWorldController.getEntityByID(funci_147279_1_.tsw_funci_148978_c());
+
+        if (var2 != null)
+        {
+            if (funci_147279_1_.tsw_funci_148977_d() == 0)
+            {
+            }
+            else if (funci_147279_1_.tsw_funci_148977_d() == 1)
+            {
+                var2.performHurtAnimation();
+            }
+        }
+    }
+
+  
+
+  
+
+    public void handleTimeUpdate(S03PacketTimeUpdate ptu)
+    {
+        this.gameController.theWorld.StructureWorldInfo.setTWorldTime(ptu.tsw_funci_149366_c());
+        this.gameController.theWorld.StructureWorldInfo.setWorldTime(ptu.tsw_funci_149365_d());
+    }
+
+    public void handleSpawnPosition(S05PacketSpawnPosition funci_147271_1_)
+    {
+       this.gameController.theWorld.getStructureWorldInfo().setSpawnPosition(funci_147271_1_.tsw_funci_149360_c(), funci_147271_1_.tsw_funci_149359_d(), funci_147271_1_.tsw_funci_149358_e());
+    }
+
+    public void handleEntityAttach(S1BPacketEntityAttach funci_147243_1_)
+    {
+        Object var2 = this.clientWorldController.getEntityByID(funci_147243_1_.tsw_funci_149403_d());
+        Entity var3 = this.clientWorldController.getEntityByID(funci_147243_1_.tsw_funci_149402_e());
+
+        if (funci_147243_1_.tsw_funci_149404_c() == 0)
+        {
+            boolean var4 = false;
+
+            if (funci_147243_1_.tsw_funci_149403_d() == this.gameController.thePlayer.getEntityId())
+            {
+                var2 = this.gameController.thePlayer;
+                var4 = ((Entity)var2).ridingEntity == null && var3 != null;
+            }
+    
+            if (var2 == null)
+            {
+                return;
+            }
+
+            ((Entity)var2).mountEntity(var3);
+
+        }
+    }
+
+    /**
+     * Invokes the entities' handleUpdateHealth method which is implemented in LivingBase (hurt/death),
+     * MinecartMobSpawner (spawn delay), FireworkRocket & MinecartTNT (explosion), IronGolem (throwing,...), Witch
+     * (spawn particles), Zombie (villager transformation), Animal (breeding mode particles), Horse (breeding/smoke
+     * particles), Sheep (...), Tameable (...), Villager (particles for breeding mode, angry and happy), Wolf (...)
+     */
+    public void handleEntityStatus(S19PacketEntityStatus funci_147236_1_)
+    {
+        Entity var2 = funci_147236_1_.tsw_funci_149161_a(this.clientWorldController);
+
+        if (var2 != null)
+        {
+            var2.handleHealthUpdate(funci_147236_1_.tsw_funci_149160_c());
+        }
+    }
+
+    public void handleUpdateHealth(S06PacketUpdateHealth funci_147249_1_)
+    {
+        this.gameController.thePlayer.setPlayerSPHealth(funci_147249_1_.tsw_funci_149332_c());
+    }
+
+
+    public void handleRespawn(S07PacketRespawn funci_147280_1_)
+    {
+            this.doneLoadingTerrain = false;
+            this.clientWorldController = new WorldClient(this, new WorldSettings(this.gameController.theWorld.getStructureWorldInfo()), funci_147280_1_.tsw_funci_149081_d());
+            this.clientWorldController.isClient = true;
+            this.gameController.loadWorld(this.clientWorldController);
+            this.gameController.setSpawnPlayer(funci_147280_1_.tsw_funci_149082_c());
+            this.gameController.playerController.setGameType(funci_147280_1_.tsw_funci_149083_e());
+    }
+
+
+    /**
+     * Handles the placement of a specified ItemData in a specified container/inventory slot
+     */
+    public void handleWindowItems(S30PacketWindowItems funci_147241_1_){}
+
+    /**
+     * Sets the progressbar of the opened window to the specified value
+     */
+    public void handleWindowProperty(S31PacketWindowProperty funci_147245_1_)
+    {
+
+    }
+
+    public void handleEntityEquipment(S04PacketEntityEquipment funci_147242_1_)
+    {
+       
+    }
+
+    /**
+     * Resets the ItemData held in hand and closes the window that is opened
+     */
+    public void handleCloseWindow(S2EPacketCloseWindow funci_147276_1_)
+    {
+        this.gameController.thePlayer.closeScreenNoPacket();
+    }
+
+    public void handleMapAreaBulk(S26PacketMapAreaBulk funci_147269_1_)
+    {
+        for (int var2 = 0; var2 < funci_147269_1_.tsw_funci_149254_d(); ++var2)
+        {
+        	int Y = 0;
+        	
+            int X = funci_147269_1_.tsw_funci_149255_a(var2);
+            int Z = funci_147269_1_.tsw_funci_149253_b(var2);
+            this.clientWorldController.doPreArea(X,Y, Z, true);
+            this.clientWorldController.invalidateTerrainObjectReceiveRegion(X << 4, 0, Z << 4, (X << 4) + 15, 256, (Z << 4) + 15);
+            Area var5 = this.clientWorldController.getAreaFromAreaCoords(X, Z);
+            var5.fillArea(funci_147269_1_.tsw_funci_149256_c(var2), funci_147269_1_.tsw_funci_149252_e()[var2], funci_147269_1_.tsw_funci_149257_f()[var2], true);
+       
+            if (!(this.clientWorldController.provider instanceof WorldProvider))
+            {
+                var5.resetRelightChecks();
+            }
+        }
+    }
+
+    public void handleChangeGameState(S2BPacketChangeGameState funci_147252_1_)
+    {
+        EntityClientPlayerMP var2 = this.gameController.thePlayer;
+        int var3 = funci_147252_1_.tsw_funci_149138_c();
+        float var4 = funci_147252_1_.tsw_funci_149137_d();
+        int var5 = MathHelper.floor_float(var4 + 0.5F);
+
+        if (var3 >= 0 && var3 < S2BPacketChangeGameState.field_149142_a.length && S2BPacketChangeGameState.field_149142_a[var3] != null)
+        {
+         
+        }
+        else if (var3 == 3)
+        {
+            this.gameController.playerController.setGameType(WorldSettings.GameType.getByID(var5));
+        }
+    }
+    
+    public void handleEffect(S28PacketEffect funci_147277_1_)
+    {
+       
+    }
+
+    public void handlePlayerListItem(S38PacketPlayerListItem funci_147256_1_)
+    {
+       
+       
+    }
+
+    public void handleKeepAlive(S00PacketKeepAlive funci_147272_1_)
+    {
+        this.addToSendQueue(new C00PacketKeepAlive(funci_147272_1_.tsw_funci_149134_c()));
+    }
+
+    /**
+     * Allows validation of the connection state transition. Parameters: from, to (connection state). Typically throws
+     * IllegalStateException or UnsupportedOperationException if validation fails
+     */
+    public void onConnectionStateTransition(EnumConnectionState funci_147232_1_, EnumConnectionState funci_147232_2_)
+    {
+        throw new IllegalStateException("Unexpected protocol change!");
+    }
+
+    public void handlePlayerAbilities(S39PacketPlayerAbilities funci_147270_1_)
+    {
+        EntityClientPlayerMP var2 = this.gameController.thePlayer;
+        var2.capAbilities.instaDestroy = funci_147270_1_.tsw_funci_149103_f();
+        var2.capAbilities.disableDamage = funci_147270_1_.tsw_funci_149112_c();
+        var2.capAbilities.setWalkSpeed(funci_147270_1_.tsw_funci_149107_h());
+    }
+
+
+    public void handleCustomPayload(S3FPacketCustomPayload funci_147240_1_)
+    {
+        if ("SW|Brand".equals(funci_147240_1_.tsw_funci_149169_c()))
+        {
+            this.gameController.thePlayer.setName(new String(funci_147240_1_.tsw_funci_149168_d(), Charsets.UTF_8));
+        }
+        else if ("SW|RPack".equals(funci_147240_1_.tsw_funci_149169_c()))
+        {
+            final String var12 = new String(funci_147240_1_.tsw_funci_149168_d(), Charsets.UTF_8);
+
+            if (this.gameController.tsw_funci_147104_D() != null && this.gameController.tsw_funci_147104_D().tsw_funci_152586_b() == ServerData.ServerResourceMode.ENABLED)
+            {
+             
+            }
+        }
+    }
+
+    /**
+     * Returns this the NetworkManager instance registered with this NetworkHandlerPlayClient
+     */
+    public NetworkManager getNetworkManager()
+    {
+        return this.netManager;
+    }
+
+	@Override
+	public void handleConfirmTransaction(S32PacketConfirmTransaction funci_147239_1_) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void handleOpenWindow(S2DPacketOpenWindow funci_147265_1_) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void handleSetSlot(S2FPacketSetSlot funci_147266_1_) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void handleExplosion(S27PacketExplosion funci_147283_1_) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void handleSoundEffect(S29PacketSoundEffect funci_147255_1_) {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+}

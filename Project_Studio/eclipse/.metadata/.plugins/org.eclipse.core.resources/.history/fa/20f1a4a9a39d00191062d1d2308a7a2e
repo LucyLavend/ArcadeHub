@@ -1,0 +1,1058 @@
+package nl.thestructureworld.client.renderer;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.Callable;
+
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.GameProfile;
+import nl.thestructureworld.client.KeyAndOtherSettings;
+import nl.thestructureworld.client.MouseControl;
+import nl.thestructureworld.client.PassingSeconds;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.gui.CreateStructureWorldGui;
+import nl.thestructureworld.client.gui.IngameGui;
+import nl.thestructureworld.client.gui.IngameMenuAndOptionsGui;
+import nl.thestructureworld.client.gui.LoadingScreenGui;
+import nl.thestructureworld.client.gui.MainMenuGui;
+import nl.thestructureworld.client.gui.ScaledResolution;
+import nl.thestructureworld.client.multiplayer.WorldClient;
+import nl.thestructureworld.client.renderer.basicmodels.ArrayListOBJModels;
+import nl.thestructureworld.client.renderer.basicmodels.RenderPipes;
+import nl.thestructureworld.client.renderer.entity.BasicEntityRender;
+import nl.thestructureworld.client.renderer.entity.EntityHoverRockRender;
+import nl.thestructureworld.client.renderer.entity.EntityPlantRenderer;
+import nl.thestructureworld.client.renderer.entity.EntityRenderAmmoBag;
+import nl.thestructureworld.client.renderer.entity.EntityRenderBadlandRipple;
+import nl.thestructureworld.client.renderer.entity.EntityRenderCustomTexture;
+import nl.thestructureworld.client.renderer.entity.EntityRenderFenceBasic;
+import nl.thestructureworld.client.renderer.entity.EntityRenderSmallTree;
+import nl.thestructureworld.client.renderer.entity.EntityRendererBodyParts;
+import nl.thestructureworld.client.renderer.entity.EntityRendererCustomMoveableObject;
+import nl.thestructureworld.client.renderer.entity.EntityRockRenderer;
+import nl.thestructureworld.client.renderer.entity.EntityMoveableRockObjectRenderer;
+import nl.thestructureworld.client.renderer.entity.EntityWoodenObjects;
+import nl.thestructureworld.client.renderer.entity.HumanSkeleton;
+import nl.thestructureworld.client.renderer.entity.ModelBasic;
+import nl.thestructureworld.client.renderer.entity.WaterRender;
+import nl.thestructureworld.client.renderer.entity.agarthians.AgarthianCimex;
+import nl.thestructureworld.client.renderer.entity.agarthians.AgarthianCimexHive;
+import nl.thestructureworld.client.renderer.entity.agarthians.AgarthianCrautus;
+import nl.thestructureworld.client.renderer.entity.agarthians.AgarthianLatis;
+import nl.thestructureworld.client.renderer.entity.agarthians.AgarthianViperaRenderer;
+import nl.thestructureworld.client.renderer.entity.arrays.ArrayListTerrain;
+import nl.thestructureworld.client.renderer.entity.bulletsandgrenades.EntityATP_MT;
+import nl.thestructureworld.client.renderer.entity.bulletsandgrenades.EntityT20_FMG;
+import nl.thestructureworld.client.renderer.entity.bulletsandgrenades.GunRenderer;
+import nl.thestructureworld.client.renderer.entity.bulletsandgrenades.MG42;
+import nl.thestructureworld.client.renderer.entity.vech.Sopwith_F1_Camel;
+import nl.thestructureworld.client.renderer.entity.vech.SpiritTrustB2Bomber;
+import nl.thestructureworld.client.renderer.entity.vech.Trust_Hawk_UAV;
+import nl.thestructureworld.client.renderer.pistols.Trock_18;
+import nl.thestructureworld.client.renderer.terrain.RenderTerrain;
+import nl.thestructureworld.client.renderer.terrain.Terrain;
+import nl.thestructureworld.client.renderer.terrain.TerrainRenderer;
+import nl.thestructureworld.client.renderer.terrain.TessellatorModel;
+import nl.thestructureworld.client.renderer.texture.TextureManager;
+import nl.thestructureworld.client.shaders.CameraAndPlayerAnimations;
+import nl.thestructureworld.client.shaders.Light;
+import nl.thestructureworld.client.shaders.Loader;
+import nl.thestructureworld.client.shaders.OBJLoader;
+import nl.thestructureworld.client.shaders.RawModel;
+import nl.thestructureworld.client.shaders.StaticShader;
+import nl.thestructureworld.client.shaders.normal.NormalMappingShader;
+import nl.thestructureworld.client.shaders.sky.SkyBoxRenderer;
+import nl.thestructureworld.client.shaders.sky.SkyRenderer;
+import nl.thestructureworld.client.shaders.sky.SkyShader;
+import nl.thestructureworld.client.shaders.terrain.TerrainShader;
+import nl.thestructureworld.client.water.WaterFrameBuffers;
+import nl.thestructureworld.client.water.WaterTile;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.entity.EntityPlayer;
+import nl.thestructureworld.entity.PlayerSPEntity;
+import nl.thestructureworld.server.TheStructureWorldServer;
+import nl.thestructureworld.util.AxisAlignedBB;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.util.MouseFilter;
+import nl.thestructureworld.util.MovingObjectPosition;
+import nl.thestructureworld.util.ReportedException;
+import nl.thestructureworld.util.ResourceLocation;
+import nl.thestructureworld.util.Vec3;
+import nl.thestructureworld.world.IEntityAccess;
+import nl.thestructureworld.world.World;
+import nl.thestructureworld.world.WorldServer;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.LWJGLException;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.ARBOcclusionQuery;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
+import org.lwjgl.opengl.OpenGLException;
+import org.lwjgl.util.glu.Cylinder;
+import org.lwjgl.util.glu.Project;
+import org.lwjgl.util.glu.Sphere;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+
+import com.google.common.collect.Maps;
+import com.google.gson.JsonSyntaxException;
+
+//V-22 Osprey
+//City of Teotihuacan
+//Leaellynasaura
+//zis 30 anti tank
+
+//The Alpha and The Omega are like light and darkness: one is needed so the other can exist.
+//Take on of them away and there will be chaos.
+//Others to much or the lack of the others.
+//They can be recreated but it will come with a price.
+
+//Tapejara
+//https://www.youtube.com/watch?v=ZAS5b1UrIMI&t=1s compy sound
+//https://www.youtube.com/watch?v=VZp6gJ0OF90
+
+//Rotor blades and sticks and stones, this is what the structure world owns
+//The dirt and grass and blood and veins, this enormous being is insane.
+
+/**
+ * Remove TextureAtlasSprite, not used anymore!!!!
+ * Weather Effect in World.java
+ * WorldAreaManager areBiomesViable need change? -> New Biome system in the make(Game read biome from map texture)
+ * TheStructureWorldServer needs removing unused code
+ * TheStructureWorldServer tsw_funci_147138_a to send data
+ * SaveFileTagCompound Needs to be cleaned
+ * PlayerMPEntity has unused code
+ * @author Cefas
+ */
+
+public class EntityRenderer implements IEntityAccess
+{
+    public static SkyShader Skyshader;
+    public static TerrainShader ShaderT;
+    public static NormalMappingShader shaderNormals;
+    public static ObjectRenderer nmr;
+    public static TerrainRenderer terrainRenderer;
+    public static SkyRenderer skyRender;
+    public static WorldRenderer worldRenderer = new WorldRenderer();
+	public static WorldClient theWorld;
+
+    /** All render lists (fixed length 4) */
+    public static RenderList allRenderLists = new RenderList();
+    
+    public static boolean anaglyphEnable;
+
+  
+     /** Pointed entity */
+    private Entity pointedEntity;
+
+    private double cameraYaw;
+    private double cameraPitch;
+
+    /** Previous frame time in milliseconds */
+    public long prevFrameTime;
+
+    private Random random = new Random();
+
+    /**
+     * Debug view direction (0=OFF, 1=Front, 2=Right, 3=Back, 4=Left, 5=TiltLeft, 6=TiltRight)
+     */
+    public int debugViewDirection;
+    public CameraAndPlayerAnimations camera = new CameraAndPlayerAnimations();
+   
+    public EntityRenderer()
+    {
+        this.prevFrameTime = TheStructureWorld.getSystemTime();
+    }
+
+    /**
+     * Updates the entity renderer
+     */
+    public void updateRenderer()
+    {
+        if(TheStructureWorld.TheStructureWorld.renderViewEntity == null)
+        {
+            TheStructureWorld.TheStructureWorld.renderViewEntity = TheStructureWorld.TheStructureWorld.thePlayer;
+        }
+     }
+    
+    public static float mouseOverX,mouseOverY=151,mouseOverZ;
+
+    /**
+     * Finds what TerrainObject or object the mouse is over at the specified partial tick time. Args: partialTickTime
+     */
+    public void getMouseOver(float t)
+    {
+        if (TheStructureWorld.TheStructureWorld.renderViewEntity != null)
+        {
+            if (TheStructureWorld.TheStructureWorld.theWorld != null)
+            {
+                TheStructureWorld.TheStructureWorld.pointedEntity = null;
+                double varib2 = (double)TheStructureWorld.TheStructureWorld.playerController.getTerrainObjectReachDistance();
+                double varib4 = varib2;
+                Vec3 varib6 = TheStructureWorld.TheStructureWorld.renderViewEntity.getPosition(t);
+                if (TheStructureWorld.TheStructureWorld.playerController.extendedReach())
+                {
+                    varib2 = 6.0D;
+                    varib4 = 6.0D;
+                }
+                else
+                {
+                    if (varib2 > 3.0D)
+                    {
+                        varib4 = 3.0D;
+                    }
+                    varib2 = varib4;
+                }
+                if (TheStructureWorld.TheStructureWorld.objectMouseOver != null)
+                {
+                    varib4 = TheStructureWorld.TheStructureWorld.objectMouseOver.hitVec.distanceTo(varib6);
+                }
+                Vec3 varib7 = TheStructureWorld.TheStructureWorld.renderViewEntity.getLook(t);
+                Vec3 varib8 = varib6.addVector(varib7.xCoord * varib2, varib7.yCoord * varib2, varib7.zCoord * varib2);
+                this.pointedEntity = null;
+                Vec3 varib9 = null;
+                float thisplayer = 1.0F;
+                List varib11 = TheStructureWorld.TheStructureWorld.theWorld.getEntitiesWithinAABBExcludingEntity(TheStructureWorld.TheStructureWorld.renderViewEntity, TheStructureWorld.TheStructureWorld.renderViewEntity.boundingBox.addCoord(varib7.xCoord * varib2, varib7.yCoord * varib2, varib7.zCoord * varib2).expand((double)thisplayer, (double)thisplayer, (double)thisplayer));
+                double varib12 = varib4; 
+                for (int varib14 = 0; varib14 < varib11.size(); ++varib14)
+                {
+                    Entity varib15 = (Entity)varib11.get(varib14);
+                    if (varib15.canBeCollidedWith())
+                    {
+                        float varib16 = varib15.getCollisionBorderSize();
+                        AxisAlignedBB varib17 = varib15.boundingBox.expand((double)varib16, (double)varib16, (double)varib16);
+                        MovingObjectPosition varib18 = varib17.calculateIntercept(varib6, varib8);
+                        if (varib17.isVecInside(varib6))
+                        {
+                            if (0.0D < varib12 || varib12 == 0.0D)
+                            {
+                                this.pointedEntity = varib15;
+                                varib9 = varib18 == null ? varib6 : varib18.hitVec;
+                                varib12 = 0.0D;
+                            }
+                        }
+                        else if (varib18 != null)
+                        {
+                            double varib19 = varib6.distanceTo(varib18.hitVec);
+                            if (varib19 < varib12 || varib12 == 0.0D)
+                            {
+                                if (varib15 == TheStructureWorld.TheStructureWorld.renderViewEntity.ridingEntity)
+                                {
+                                    if (varib12 == 0.0D)
+                                    {
+                                        this.pointedEntity = varib15;
+                                        varib9 = varib18.hitVec;
+                                    }
+                                }
+                                else
+                                {
+                                    this.pointedEntity = varib15;
+                                    varib9 = varib18.hitVec;
+                                    varib12 = varib19;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (this.pointedEntity != null && (varib12 < varib4 || TheStructureWorld.TheStructureWorld.objectMouseOver == null))
+                {
+                    TheStructureWorld.TheStructureWorld.objectMouseOver = new MovingObjectPosition(this.pointedEntity, varib9);
+                    if (this.pointedEntity instanceof EntityLivingBase)
+                    {
+                        TheStructureWorld.TheStructureWorld.pointedEntity = this.pointedEntity;
+                    }
+                }
+            }
+        }
+    }
+
+    
+    public static WorldServer serverWorld;
+    public static int onWorldLoaded = 0;
+   
+    public static boolean refreshArea4 = false;
+    public static boolean refreshArea5 = false;
+    public static boolean refreshArea6 = false;
+    public static boolean refreshArea7 = false;
+    public static boolean refreshArea8 = false;
+    public static boolean refreshArea9 = false;
+    public static boolean refreshArea10 = false;
+    public static boolean refreshArea11 = false;
+    public static boolean refreshArea12 = false;
+    public static List<WaterTile> waterList = new ArrayList<WaterTile>();
+    public static List<Light> light = new ArrayList<Light>();
+    public static Terrain terrain;
+    public static float[] skyColor;
+	public static float fogDensity = 0.5F;
+	public static float fogGradient = 5F;
+	public static WaterFrameBuffers buffer = new WaterFrameBuffers();
+
+	public void setFogColor(float[] color3F)
+	{
+		skyColor = new float[]{color3F[0],color3F[1],color3F[2],1F};	
+	}
+	
+  
+    public PassingSeconds passingTime = new PassingSeconds();
+   
+    public int renderDistance = 10;
+    
+    public float[] maxCustomSkyColor = new float[]{1F,1F,1F};
+    public float[] maxCustomFogColor = new float[]{0.9F,1F,0.9F};
+    public static List<ArrayListOBJModels> OBJModelList = new ArrayList<ArrayListOBJModels>();
+    
+   
+	public static void loadModels()
+	{
+		RenderTerrain terrain = new RenderTerrain();
+		//ModelBasic.saveModelInList(100, OBJLoader.loadObjModel("fern", new Loader()));
+        //ModelBasic.saveModelInList(101, OBJLoader.loadObjModel("palm", new Loader()));
+        //ModelBasic.saveModelInList(102, OBJLoader.loadObjModel("grasses", new Loader()));
+        //ModelBasic.saveModelInList(103, OBJLoader.loadObjModel("stump", new Loader()));
+        //ModelBasic.saveModelInList(104, terrain.renderSmallTree());
+        //ModelBasic.saveModelInList(105, OBJLoader.loadObjModel("mushroom", new Loader()));
+        //ModelBasic.saveModelInList(106, OBJLoader.loadObjModel("junglerock", new Loader()));
+        //ModelBasic.saveModelInList(109, OBJLoader.loadObjModel("flat_rock", new Loader()));
+        //ModelBasic.saveModelInList(110, terrain.renderReed());
+        //ModelBasic.saveModelInList(112, OBJLoader.loadObjModel("ore", new Loader()));
+        //ModelBasic.saveModelInList(114, OBJLoader.loadObjModel("bones/skull_nj_high", new Loader()));
+        //ModelBasic.saveModelInList(115, OBJLoader.loadObjModel("agarthia_artifact", new Loader()));
+        //ModelBasic.saveModelInList(116, OBJLoader.loadObjModel("RGal_Hat", new Loader()));
+        //ModelBasic.saveModelInList(127, OBJLoader.loadObjModel("Agarthian_Spira", new Loader()));
+        //ModelBasic.saveModelInList(134, terrain.renderRipple());
+        //ModelBasic.saveModelInList(300, OBJLoader.loadObjModel("Glock_32_v3", new Loader()));
+		//OBJModelList.add(new ArrayListOBJModels(terrain.skybox(), "sky"));
+		OBJModelList.add(new ArrayListOBJModels(terrain.renderSmallTree(), "smaller_tree"));
+		
+		OBJModelList.add(new ArrayListOBJModels("Agarthian_Structure"));
+		
+		OBJModelList.add(new ArrayListOBJModels("skybox"));
+     	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Vipera_Screecher_Head"));
+     	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Vipera_Alpha_Head"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Vipera_Spiker_Head"));
+     	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Vipera_Head"));
+     	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Vipera_Body"));
+       	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Manta_Part"));
+       	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Rib_Part"));
+     	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Body_Spiker"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Vipera_Tail"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Pointy_Body_Part"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Castus_Head"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Castus_Body"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Tail_Armor"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Tail_FlatTail"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_PointyLeg"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Cimex_Head"));
+    	OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Latis"));
+    	
+        OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Pontem_Lamp"));
+        OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Spira_Attack"));
+        OBJModelList.add(new ArrayListOBJModels("Agarthian Parts/Agarthian_Spira"));
+        //Hand Models
+        OBJModelList.add(new ArrayListOBJModels("player/holdMg42"));
+        OBJModelList.add(new ArrayListOBJModels("player/holdM5A1"));
+        OBJModelList.add(new ArrayListOBJModels("player/arm"));
+        
+
+        
+        OBJModelList.add(new ArrayListOBJModels("Joint"));
+        
+        OBJModelList.add(new ArrayListOBJModels("player/hand"));
+        
+        OBJModelList.add(new ArrayListOBJModels("player/arm_mirror"));
+        OBJModelList.add(new ArrayListOBJModels("player/hand_mirror"));
+        //End
+        OBJModelList.add(new ArrayListOBJModels("plane - kopie"));
+        
+        //Plants  
+        OBJModelList.add(new ArrayListOBJModels("plants/grasses"));
+        OBJModelList.add(new ArrayListOBJModels("plants/grass"));
+        OBJModelList.add(new ArrayListOBJModels("plants/fern"));
+        OBJModelList.add(new ArrayListOBJModels("plants/mushroom_flat"));
+        OBJModelList.add(new ArrayListOBJModels("plants/mushroom"));
+        OBJModelList.add(new ArrayListOBJModels("plants/mushroom_group"));
+        OBJModelList.add(new ArrayListOBJModels("plants/crop"));
+        OBJModelList.add(new ArrayListOBJModels("plants/bush"));
+        OBJModelList.add(new ArrayListOBJModels("plants/ferns"));
+        
+        OBJModelList.add(new ArrayListOBJModels("plants/2DPlane"));
+        OBJModelList.add(new ArrayListOBJModels("plants/pine_stump"));
+        OBJModelList.add(new ArrayListOBJModels("plants/pine_trunk"));
+        OBJModelList.add(new ArrayListOBJModels("plants/pine_tree"));
+        OBJModelList.add(new ArrayListOBJModels("plants/Palm_Tree"));
+        OBJModelList.add(new ArrayListOBJModels("plants/Straight_Palm_Tree"));   
+        //
+        OBJModelList.add(new ArrayListOBJModels("rock/Rock"));
+        OBJModelList.add(new ArrayListOBJModels("rock/stone_big"));
+        OBJModelList.add(new ArrayListOBJModels("rock/stone_normal"));
+        OBJModelList.add(new ArrayListOBJModels("rock/stone_small"));
+        OBJModelList.add(new ArrayListOBJModels("rock/mossybumpyrock"));
+        OBJModelList.add(new ArrayListOBJModels("rock/mossyrocktop"));
+        OBJModelList.add(new ArrayListOBJModels("rock/ore"));
+        
+        OBJModelList.add(new ArrayListOBJModels("particles/dirt_particle"));
+        OBJModelList.add(new ArrayListOBJModels("particles/dirt_particle_low"));
+        OBJModelList.add(new ArrayListOBJModels("particles/plank"));
+        OBJModelList.add(new ArrayListOBJModels("particles/smoke"));
+        OBJModelList.add(new ArrayListOBJModels("particles/bullet_sleeve"));
+        OBJModelList.add(new ArrayListOBJModels("particles/whole_bullet"));
+
+        OBJModelList.add(new ArrayListOBJModels("crystals/crystal_shard"));
+        
+        OBJModelList.add(new ArrayListOBJModels("crystals/hexagonal"));
+        OBJModelList.add(new ArrayListOBJModels("crystals/crystal_shard"));
+        OBJModelList.add(new ArrayListOBJModels("crystals/crystal"));
+        
+        OBJModelList.add(new ArrayListOBJModels("crate/crate_detail"));
+        OBJModelList.add(new ArrayListOBJModels("crate/crate_frame"));
+        OBJModelList.add(new ArrayListOBJModels("crate/crate"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_tentacles"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_tentacle"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_orb"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_seed"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_nest"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_meduc"));
+        //OBJModelList.add(new ArrayListOBJModels("duacaz/duacaz_tree"));
+        
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/UAV/High_T_Hawk"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/UAV/Low_T_Hawk"));
+        
+        
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/SupplySignaller"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/MG42_Magazine"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Magazine_200x_MG42"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Magazine_400x"));
+        
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/MG42_AAIS"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/MG42_Iron_Sight"));
+     
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Sensors/D_AVS"));
+        
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/TF_IronSight"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Coyote"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/ACOG"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Sight"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Holo"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/Holo_RU_22"));
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/TCOG"));
+        OBJModelList.add(new ArrayListOBJModels("Turrets/T20_FMG"));
+        OBJModelList.add(new ArrayListOBJModels("Turrets/Tripod"));
+        OBJModelList.add(new ArrayListOBJModels("Turrets/ATP_MT_Holder"));
+        OBJModelList.add(new ArrayListOBJModels("Turrets/ATP_MT_Energybolt_Shooter"));
+        OBJModelList.add(new ArrayListOBJModels("Ammo/M15"));
+        OBJModelList.add(new ArrayListOBJModels("Ammo/T20_FMG_Bullet"));
+        OBJModelList.add(new ArrayListOBJModels("Ammo/Energy_Capsule"));
+        OBJModelList.add(new ArrayListOBJModels("Ammo/40×53mm_Head"));
+        OBJModelList.add(new ArrayListOBJModels("guns/MGL_Milkor"));
+        OBJModelList.add(new ArrayListOBJModels("planesAndJets/Trust_Spirit"));
+        OBJModelList.add(new ArrayListOBJModels("planesAndJets/Sopwith_F1_Camel"));
+        
+        OBJModelList.add(new ArrayListOBJModels("ballistic_face_mask"));
+        
+        OBJModelList.add(new ArrayListOBJModels("guns/panzerfaust"));
+        OBJModelList.add(new ArrayListOBJModels("guns/Panzerfaust_60"));
+        OBJModelList.add(new ArrayListOBJModels("guns/McMillan_CS5"));
+        
+        OBJModelList.add(new ArrayListOBJModels("guns/Vitreus_Rifle"));
+        OBJModelList.add(new ArrayListOBJModels("guns/MG42"));
+        OBJModelList.add(new ArrayListOBJModels("guns/MG_KORD_2000"));
+        OBJModelList.add(new ArrayListOBJModels("guns/Minigun"));
+        OBJModelList.add(new ArrayListOBJModels("guns/barrel_minigun"));
+        OBJModelList.add(new ArrayListOBJModels("guns/Sc_Burst_MG"));
+        OBJModelList.add(new ArrayListOBJModels("guns/Trock_18"));
+        OBJModelList.add(new ArrayListOBJModels("guns/TMP5K"));
+        
+        OBJModelList.add(new ArrayListOBJModels("T_Bomber_Rocket"));
+        
+        OBJModelList.add(new ArrayListOBJModels("StegosaurusTail"));
+        
+        OBJModelList.add(new ArrayListOBJModels("sign"));
+        
+        OBJModelList.add(new ArrayListOBJModels("Trust_Advancer_Helmet"));
+        OBJModelList.add(new ArrayListOBJModels("Trust_Scout_Helmet"));
+        
+        OBJModelList.add(new ArrayListOBJModels("Gadgets/AmmoBag"));
+        
+        OBJModelList.add(new ArrayListOBJModels("guns/PanzerFaust_60_rocket"));
+        OBJModelList.add(new ArrayListOBJModels("guns/panzerfaust_rocket"));
+        
+        OBJModelList.add(new ArrayListOBJModels("water"));
+        
+        OBJModelList.add(new ArrayListOBJModels("guns/Igla_S"));
+        
+        OBJModelList.add(new ArrayListOBJModels("machete"));
+        OBJModelList.add(new ArrayListOBJModels("pickaxe_steel"));   
+ 	}
+    
+	public boolean setLayDown = false;
+	
+	public void renderWorld(float ticker)
+    { 
+		//Player height states
+		if(setLayDown)
+		{
+			TheStructureWorld.TheStructureWorld.thePlayer.setLayingdown(true);
+			setLayDown = false;
+		}
+		//End
+		try
+		{
+		int time = (60 * IngameGui.Hours) + IngameGui.minutes;
+		EntityLivingBase base = TheStructureWorld.TheStructureWorld.renderViewEntity;
+		
+		fogDensity = base.worldObj.StructureWorldInfo.WorldFog;
+		camera.getUpAnimation(base);
+		
+		//MouseControl.controlForgeObjects();
+		
+		passingTime.seconds();
+		
+		if(passingTime.secondspassed)
+	    {
+			if(this.skyRender!=null)
+	        {
+	        	this.skyRender.updateClouds();
+	        }
+			
+			camera.breathAnimation((EntityPlayer)base);
+			
+			camera.walkAnimationWhenMoved((EntityPlayer)base);
+			
+			MouseControl.setTime();
+			
+			if(this.nmr!=null)
+			{
+				this.nmr.updateWater();
+			}
+			GameProfile.AdminCommands();
+	    }
+		
+		if(((EntityPlayer)base).hasMoved && onWorldLoaded > 1)
+		{
+			this.updateArea();
+		}
+		
+		if(Keyboard.isKeyDown(Keyboard.KEY_MINUS) && Keyboard.isKeyDown(Keyboard.KEY_EQUALS))
+		{
+			serverWorld.StructureWorldInfo.stopTime = true;
+		}
+		
+		this.worldRenderer.updateFogAndSun(this, time);
+		
+		camera.setCamposAndPitch(ticker, base,(float)nl.thestructureworld.client.renderer.EntityRenderer.allRenderLists.cameraX,(float)nl.thestructureworld.client.renderer.EntityRenderer.allRenderLists.cameraY + camera.walkingAnimation + camera.bodyPos,(float)nl.thestructureworld.client.renderer.EntityRenderer.allRenderLists.cameraZ, camera.pitch ,camera.walkAnimation*(camera.drunkWalk));  
+		
+		this.getMouseOver(ticker);
+		
+        if(this.serverWorld == null){this.serverWorld = TheStructureWorldServer.getServer().worldServer();}
+        
+        FNFKeybinds.hideStatGui();
+        FNFKeybinds.RefreshTerrainShader(base);
+        FNFKeybinds.RefreshObjectShader();
+        
+        if(onWorldLoaded == 1)
+        {	
+        	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(false,"sky", 2F,2F,"sky",new float[]{1,1,0,0},new float[]{250,154,207},0.2F,0,0,0, 0.1F));     	
+              
+           //this.nmr.spawnEntity(new EntityRenderCustomTexture("vech/trust_car", 2F,2F,"trust_car",new float[]{1,1,0,0},new float[]{250,154,207},0.2F,0,0,0, 1F));     	
+             
+           //skybox
+           
+           
+           //this.nmr.spawnEntity(new EntityT20_FMG("guns/T20_FMG", 2F,-6F,"Turrets/Tripod",new float[]{1,1,0,0},new float[]{209,154,239},0,0,this.random.nextInt(360),0, 1F));     	
+            
+           //this.nmr.spawnEntity(new EntityATP_MT("guns/ATM_MT", 2F,-6F,"Turrets/Tripod",new float[]{1,1,0,0},new float[]{211,154.8F,239},0,0,this.random.nextInt(360),0, 0.5F));     	
+
+    	 	
+        	this.nmr.spawnEntity(new AgarthianCimexHive(2,"Agarthian_Structure",new float[]{16,16,5,2},new float[]{215,154.5F,239},0,0,0,0,1F));     	           
+        	this.nmr.spawnEntity(new AgarthianCimexHive(2,"Agarthian_Structure",new float[]{16,16,7,1},new float[]{219,155.5F,232},0,0,0,0,1F));     	        
+             
+        	//this.nmr.spawnEntity(new HumanSkeleton(false,6,"StegosaurusTail", 2F,2F,"StegosaurusTail",new float[]{1,1,0,0},new float[]{219,155.5F,249},0.2F,0,0,0, 1F));     	 	
+           	
+        	
+        	this.nmr.spawnEntity(new EntityRenderCustomTexture(false,3,"Trust_Advancer_Helmet", 2F,2F,"Trust_Advancer_Helmet",new float[]{1,1,0,0},new float[]{219,156F,247},0.2F,0,0,0, 1F));     	
+        	this.nmr.spawnEntity(new EntityRenderCustomTexture(false,3,"Trust_Scout_Helmet", 2F,2F,"Trust_Scout_Helmet",new float[]{1,1,0,0},new float[]{219,156F,248},0.2F,0,0,0, 1F));     	
+
+        	for(int i =0;i < 5;++i)
+        	{
+        		this.nmr.spawnEntity(new Trust_Hawk_UAV(false,3,"gadgets/UAV/T_Hawk/T_Hawk", 2F,2F,"High_T_Hawk",new float[]{1,3,0,0},new float[]{219,156F,249},0.2F,0,0,0, 1F));     	  	
+        	}
+       
+         	this.nmr.spawnEntity(new EntityRenderCustomTexture(false,6,"gadgets/Sensor/D_AVS", 2F,2F,"D_AVS",new float[]{1,1,0,0},new float[]{218,155.5F,242},0.2F,0,0,0, 1F));     	
+            
+        	
+        	this.nmr.spawnEntity(new EntityRenderCustomTexture(false,6,"machete", 2F,2F,"machete",new float[]{1,1,0,0},new float[]{219,155.5F,240},0.2F,0,0,0, 1F));     	
+        	this.nmr.spawnEntity(new EntityRenderCustomTexture(false,6,"pickaxe_steel", 2F,2F,"pickaxe_steel",new float[]{1,1,0,0},new float[]{217,156F,239},0.2F,0,0,0, 1F));     	
+        	
+        	//this.nmr.spawnEntity(new Sopwith_F1_Camel("vech/SopwithCamel", 2F,2F,"Sopwith_F1_Camel",new float[]{1,1,0,0},new float[]{217,159F,239},0.2F,0,0,0, 1F));     	
+        	
+        	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(6,"Metal Rock", 2F,2F,"Rock",new float[]{1,1,0,0},new float[]{219,155.5F,239},0.2F,0,0,0, 1F));     	
+        	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(true,8,"Quartz", 2F,2F,"ore",new float[]{1,1,0,0},new float[]{219,155.5F,237},0.2F,0,0,0, 1F));     	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(true,8,"BrownRock", 2F,2F,"ore",new float[]{1,1,0,0},new float[]{219,155.5F,236},0.2F,0,0,0, 1F));     	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(true,8,"Obsidian", 2F,2F,"ore",new float[]{1,1,0,0},new float[]{219,155.5F,235},0.2F,0,0,0, 1F));     	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(true,8,"FernFossil", 2F,2F,"ore",new float[]{1,1,0,0},new float[]{219,155.5F,234},0.2F,0,0,0, 1F));     	
+        	//this.nmr.spawnEntity(new EntityRenderCustomTexture(true,8,"Stone", 2F,2F,"ore",new float[]{1,1,0,0},new float[]{219,155.5F,233},0.2F,0,0,0, 1F));     	
+        	float x = 224;
+        	float z = 224;
+       
+        	for(int i = 0;i < 40;++i)
+        	{
+        		if(this.random.nextInt(9) == 0)
+        		{
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"smaller_tree",new float[]{3.2F,8,0,1},new float[]{x,155.5F,z},0F,0,0F,0, 3F));
+        		}
+        		else if(this.random.nextInt(12) == 0)
+        		{
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"smaller_tree",new float[]{3.2F,8,0,2},new float[]{x,155.5F,z},0F,0,0F,0, 3F));
+        		}
+        		else if(this.random.nextInt(8) == 0)
+        		{
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"smaller_tree",new float[]{3.2F,8,0,3},new float[]{x,155.5F,z},0F,0,0F,0, 3F));
+        		}
+        		
+        		if(this.random.nextInt(1) == 0)
+        		{
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"grass",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"grass",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"grass",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"grass",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        		
+        			//this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"grasses",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			//this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"grasses",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			//this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"grasses",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			//this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"grasses",new float[]{32,32,9+ this.random.nextInt(2),0 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			//this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"grass",new float[]{16,16,5,3},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        		
+        			
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"ferns",new float[]{16,16,1,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        		}
+        	
+        		if(this.random.nextInt(1) == 0)
+        		{
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"stone_big",new float[]{16,16,0,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"stone_normal",new float[]{16,16,0,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"stone_small",new float[]{16,16,0,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        		}
+        		
+        		
+        		if(this.random.nextInt(15) == 0)
+        		{
+	        		this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"mushroom",new float[]{16,16,6,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+	        		this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"mushroom_group",new float[]{16,16,6,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+	        		
+	        		this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"mushroom_flat",new float[]{16,16,7,0},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+	        	}
+        		
+        		if(this.random.nextInt(5) == 0)
+        		{
+        			//this.nmr.spawnEntity(new EntityRenderSmallTree(true, 0.3F,-4F,"fern",new float[]{16,16,5 + this.random.nextInt(6),1 + this.random.nextInt(1)},new float[]{x,155.5F,z},0F,0,0F,0, 3F));
+        		}
+        		
+        		
+        		if(this.random.nextInt(9) == 0)
+        		{
+        			this.nmr.spawnEntity(new EntityRenderSmallTree(false, 0.3F,-4F,"bush",new float[]{16,16,5,4},new float[]{x,155.5F,z},0F,0,0F,0, 1F));
+        		}
+        	}
+
+           
+           this.nmr.spawnEntity(new AgarthianViperaRenderer("Vipera_Spiker_Head",new float[]{1,1,0,0},new float[]{213,156,239},0,0,0, 0.4F));     	   
+           this.nmr.spawnEntity(new AgarthianViperaRenderer("Vipera_Head",new float[]{1,1,0,0},new float[]{213,156,239},0,0,0, 0.25F));     	   
+           this.nmr.spawnEntity(new AgarthianViperaRenderer("Vipera_Alpha_Head",new float[]{1,1,0,0},new float[]{213,156,239},0,0,0, 0.5F));     	   
+           this.nmr.spawnEntity(new AgarthianViperaRenderer("Vipera_Screecher_Head",new float[]{1,1,0,0},new float[]{213,156,239},0,0,0, 0.4F));     	   
+           
+           this.nmr.spawnEntity(new AgarthianCrautus("Agarthian_Castus_Head",new float[]{1,1,0,0},new float[]{219,155.5F,232},0,0,0, 0.4F));     	          
+        
+           
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"crystal",new float[]{16,16,6,0},new float[]{205,154,239},0,0,0,0,1F));     	        
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"crystal",new float[]{16,16,5,0},new float[]{212,154,239},0,0,0,0,1F));     	        
+            //this.nmr.spawnEntity(new EntityRockRenderer(3,"crystal",new float[]{16,16,6,1},new float[]{207,154,239},0,0,0,0,1F));     	        
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"crystal",new float[]{16,16,5,1},new float[]{203,154,239},0,0,0,0,1F));     	          
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"hexagonal",new float[]{16,16,5,3},new float[]{215,154,239},0,0,0,0,2F));     	        
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"hexagonal",new float[]{16,16,6,3},new float[]{217,154,239},0,0,0,0,2F));  
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"hexagonal",new float[]{16,16,7,3},new float[]{219,154,239},0,0,0,0,2F));  
+        	//this.nmr.spawnEntity(new EntityRockRenderer(3,"hexagonal",new float[]{16,16,8,3},new float[]{221,154,239},0,0,0,0,2F));  
+        	 
+        	//float[] recoilTrock = new float[]{0.5F,1.1F,1.3F ,1.1F,1.3F,1.1F,1.3F};
+        	//this.nmr.spawnEntity(new Trock_18(15,100,recoilTrock, "Trock_18",10,6,1,"Trock_18","Trock_18",new float[]{213,156,239},0,0,0, 0.2F));     	
+           
+        	//this.nmr.spawnEntity(new MG42(15,100,recoilTrock, "TMP5K",10,6,1,"TMP5K","TMP5K",new float[]{213,156,239},0,0,0, 1F));     	
+         
+        	//this.nmr.spawnEntity(new MG42(15,100,recoilTrock, "Igla_S",10,6,1,"Igla","Igla_S",new float[]{213,156,239},0,0,0, 0.2F));     	
+           
+        	//this.nmr.spawnEntity(new EntityWoodenObjects("crates/crate", 2F,2F,"crate_detail",new float[]{1,1,0,0},new float[]{250,155,215},0,0,0,0, 1F));     	
+           //this.nmr.spawnEntity(new EntityRenderCustomTexture(false,6,"sign", 2F,2F,"sign",new float[]{1,1,0,0},new float[]{250,155,217},0.2F,0,0,0, 1F));     	
+           //this.nmr.spawnEntity(new EntityRenderAmmoBag("Gadgets/SupplySignaller",  2F,2F,"Gadgets/SupplySignaller",new float[]{1,1,0,0},new float[]{250,156,218},-0.15F,0,0,0,1F));     	
+           //this.nmr.spawnEntity(new EntityRenderAmmoBag("Gadgets/AmmoBag",  2F,2F,"Gadgets/AmmoBag",new float[]{1,1,0,0},new float[]{252,156,218},-0.15F,0,0,0,1F));     	
+   	 	
+           //this.nmr.spawnEntity(new EntityWoodenObjects("crates/military_crate", 2F,2F,"crate_detail",new float[]{1,1,0,0},new float[]{258,155,215},0,0,0,0, 1F));     	
+ 	    
+           
+           //this.nmr.spawnEntity(new MG42(15,100,recoilTrock, "McMillan_CS5",10,6,1,"McMillan_CS5","McMillan_CS5",new float[]{213,156,239},0,0,0, 0.2F));     	
+           
+           //this.nmr.spawnEntity(new GunRenderer(15,10,recoil, "guns/Panzerfaust_60",10,6,1,"Panzerfaust_60","Panzerfaust_60",new float[]{215,157,242},0,0,0, 0.2F)); 
+           
+           //this.nmr.spawnEntity(new GunRenderer(15,10,recoil, "guns/panzerfaust",10,6,1,"panzerfaust","panzerfaust",new float[]{213,157,242},0,0,0, 0.2F)); 
+           
+           
+           //this.nmr.spawnEntity(new GunRenderer(1,8,recoil, "guns/milkor",10,6,1,"milkor","MGL_Milkor",new float[]{250,154,197},0,0,0, 0.2F)); 
+
+           
+        	//float[] recoil = new float[]{0.5F,1.9F,2F ,2F,2.2F  ,2.2F,2.5F , 1};
+        	//this.nmr.spawnEntity(new MG42(15,100,recoil, "MG42",10,6,1,"MG42","MG42",new float[]{213,156,239},0,0,0, 0.2F));     	
+           
+           
+           //float[] recoil2 = new float[]{0.5F,1.9F,2F ,2F,2.2F  ,2.2F,2.5F , 2};
+           //this.nmr.spawnEntity(new GunRenderer(15,100,recoil2, "MG42",10,7,1,"MG42","MG42",new float[]{213,156,239},0,0,0, 0.2F));     	
+           //float[] recoil3 = new float[]{0.5F,1.9F,2F ,2F,2.2F  ,2.2F,2.5F , 3};
+           //this.nmr.spawnEntity(new GunRenderer(15,100,recoil3, "MG42",10,7,1,"MG42","MG42",new float[]{213,156,239},0,0,0, 0.2F));     	
+            
+           //this.nmr.spawnEntity(new GunRenderer(11,100,recoil, "MG_KORD_2000",10,7,1,"MG_KORD_2000","MG_KORD_2000",new float[]{214,154,239},0,0,0, 0.2F));     	
+           //this.nmr.spawnEntity(new GunRenderer(11,100,recoil2, "MG_KORD_2000",10,7,1,"MG_KORD_2000","MG_KORD_2000",new float[]{214,154,239},0,0,0, 0.2F));     	
+           //this.nmr.spawnEntity(new GunRenderer(11,100,recoil3, "MG_KORD_2000",10,7,1,"MG_KORD_2000","MG_KORD_2000",new float[]{214,154,239},0,0,0, 0.2F));     	
+           
+           //this.nmr.spawnEntity(new GunRenderer(15,100,recoil3, "Sc_Burst_MG",10,7,1,"Sc_Burst_MG","Sc_Burst_MG",new float[]{256,155,204},0,0,0, 0.2F));     	
+           
+            //this.nmr.spawnEntity(new GunRenderer(1,0,2,"Vitreus_Rifle","Vitreus_Rifle",new float[]{256,154,200},0,0,0, 0.2F));     	
+            //this.nmr.spawnEntity(new GunRenderer(1,2,0,"milkor", "MGL_Milkor",new float[]{250,154,200},0,0,0, 0.2F));     	
+            //this.nmr.spawnEntity(new GunRenderer(1,3,0,"milkor", "MGL_Milkor",new float[]{250,154,203},0,0,0, 0.2F));     	
+            //this.nmr.spawnEntity(new GunRenderer(1,4,0,"milkor", "MGL_Milkor",new float[]{250,154,206},0,0,0, 0.2F));     	
+            //this.nmr.spawnEntity(new GunRenderer(1,5,0,"milkor", "MGL_Milkor",new float[]{250,154,209},0,0,0, 0.2F)); 
+            //this.nmr.spawnEntity(new GunRenderer(1,6,0,"milkor", "MGL_Milkor",new float[]{250,154,209},0,0,0, 0.2F)); 
+            //this.nmr.spawnEntity(new GunRenderer(10,0,3,"Metal_Texture","Minigun",new float[]{254,154,204},0,0,0, 0.2F)); 
+            
+            
+            
+            //this.nmr.spawnEntity(new AgarthianLatis("Agarthian_Latis",new float[]{1,1,0,0},new float[]{246,154,210},0,0,0, 1F));     	   
+           
+            //this.nmr.spawnEntity(new EntityRockRenderer(6F,2F,"Agarthian_Spira",new float[]{10,10,8,2},new float[]{251,154,210},0,0,this.random.nextInt(360),0, 0.5F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(6F,2F,"Agarthian_Spira_Attack",new float[]{10,10,8,2},new float[]{253,154,209},0,0,this.random.nextInt(360),0, 0.5F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(2.5F,2F,"Agarthian_Pontem_Lamp",new float[]{10,10,7,2},new float[]{253,154,212},0,0,this.random.nextInt(360),0, 0.5F));     	
+          
+       
+        	
+ 
+        	//this.nmr.spawnEntity(new EntityMoveableRockObjectRenderer(false,1F, 0F,0F,114,new float[]{10,10,5,4},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0, 0.2F));     	
+           
+        	//this.nmr.spawnEntity(new EntityRenderT_Spirit(new ModelBasic(false,0,1,0.1F,-1F,"objectsandterrain/trust_spirit",new Vector4f(1F,2.5F,0F,0F),125,true,true),new float[]{1,1,0,0},new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,1F));     	
+            
+            //this.nmr.spawnEntity(new EntityPlantRenderer(105,new float[]{10,10,9,5},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, (this.random.nextInt(100)/80F)+0.3F));     	
+             	
+            //this.nmr.spawnEntity(new EntityPlantRenderer(100,new float[]{10,10,7,2},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, this.random.nextInt(100)/200F));     	
+            
+            //this.nmr.spawnEntity(new EntityPlantRenderer(102,new float[]{10,10,6,3},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, this.random.nextInt(100)/100F));     	
+            //this.nmr.spawnEntity(new EntityPlantRenderer(102,new float[]{10,10,4,3},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, this.random.nextInt(100)/100F));     	
+            //this.nmr.spawnEntity(new EntityPlantRenderer(102,new float[]{10,10,3,3},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, this.random.nextInt(100)/100F));     	
+            //this.nmr.spawnEntity(new EntityPlantRenderer(102,new float[]{10,10,2,3},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, this.random.nextInt(100)/100F));     	
+            
+            //this.nmr.spawnEntity(new EntityRockRenderer(130,new float[]{10,10,9,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0.5F,0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(131,new float[]{10,10,9,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0.5F,0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(132,new float[]{10,10,9,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0.5F,0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(133,new float[]{10,10,9,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0.5F,0,0,0,0.1F));     	
+            
+             
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture("Royal Fixer", 0.7F,-1F,200,new float[]{1,1,0,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,this.random.nextInt(360),0, 0.5F));     	
+           
+            //this.nmr.spawnEntity(new EntityRenderBadlandRipple(new ModelBasic(false,0,10,0.1F,-1F,"objectsandterrain/badland ripple",new Vector4f(1F,2.5F,0F,0F),134,true,true),new float[]{1,1,0,0},new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(112,new float[]{20,20,14,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,(this.random.nextInt(10)/80F)+0.3F));     	        
+            //this.nmr.spawnEntity(new EntityRockRenderer(112,new float[]{20,20,15,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,(this.random.nextInt(10)/80F)+0.3F));     	    
+            //this.nmr.spawnEntity(new EntityRockRenderer(106,new float[]{10,10,9,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,(this.random.nextInt(10)/80F)+0.3F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(107,new float[]{4,4,0,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,(this.random.nextInt(10)/80F)+1.3F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(108,new float[]{4,4,0,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(1F,-1F,109,new float[]{10,10,8,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityRockRenderer(109,new float[]{10,10,8.5F,0},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityPlantRender(100,new float[]{10,10,5,3},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/RG_Hat",new Vector4f(0.5F,2F,0,0),116,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,1F));     	
+   
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),117,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),118,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),119,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,0.5F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),120,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,0.1F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),121,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,0.6F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),122,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,0.6F));     	
+            //this.nmr.spawnEntity(new EntityRenderCustomTexture(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/duacaz_tentacle",new Vector4f(0.4F,2,1,0),123,true,true),new float[]{(float)220+this.random.nextInt(55),(float)220+this.random.nextInt(55)},0,0,0,0.6F));     	
+            
+            //this.nmr.spawnEntity(new EntityRockRenderer(115,new float[]{10,10,6,4},new float[]{(float)225+this.random.nextInt(55),(float)225+this.random.nextInt(55)},0,0,0,0,2F));     	        
+             
+            //this.nmr.spawnEntity(new EntityPlantRender(101,new float[]{5,5,0,1},new float[]{(float)225,(float)225},0,0,0,0,2F));     	
+            
+            //this.nmr.spawnEntity(new EntityRenderFenceBasic(new ModelBasic(0,terrain.renderFence(false),10,0.7F,0F, "/objectsandterrain/objects/military_metal_fence",new Vector4f(0.5F,1.5F,0,0),102,false,false),new float[]{0.5F,0},0,0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityWoodObjectRender(175,0.5F,new ModelBasic(0,crate, 10,0.1F,0.4F,"objectsandterrain/crates/military_crate 1024x",new Vector4f(0.5F,1.5F,0F,0F),99,false,false), new float[]{0.5F,0.5F},0,0,0,0,0.005F));
+            //this.nmr.spawnEntity(new EntityRenderFenceBasic(new ModelBasic(0,terrain.renderFence(true),10,0.7F,0F, "/objectsandterrain/objects/military_metal_fence",new Vector4f(0.5F,1.5F,0,0),102,false,false),new float[]{0,0},0,0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityRenderFenceBasic(new ModelBasic(0,terrain.renderFence(true),10,0.1F,0F, "/objectsandterrain/objects/military_fence 1024x",new Vector4f(0.5F,1.5F,0,0),102,false,false),new float[]{0,0},0,0,0,0,1F));     	
+            //this.nmr.spawnEntity(new EntityWoodObjectRender( 75,0.5F,new ModelBasic(0,crate,                10,0.1F,0F,"objectsandterrain/crates/crate 1024x",new Vector4f(0.5F,1.5F,0F,0F),99,false,false), new float[]{0.5F,0.5F},0,0,0,0,0.005F));
+            //this.nmr.spawnEntity(new EntitySpiderSentinelRender(new ModelBasic(false,0,EntitySpiderSentinelRender.renderSpiderSentinel(),1F,0.0F,2F,"/objectsandterrain/objects/Fixer 512x",new Vector4f(0.5F,1.5F,0F,0F),100,false,false), new float[]{0,0},0,0,0,0,0.5F));     	
+            //this.nmr.spawnEntity(new BasicEntityRender(new ModelBasic(true,2, pipe.renderPipe(0.05F,5F,2F,5F,4F,0F,0F),10,1F,ticker, "/objectsandterrain/AgarthianMetal",new Vector4f(0,0.5F,0,0),102,true,true), new float[]{0,0},0,0,0,0,0.5F));     	
+        }
+        if(onWorldLoaded == 1)
+        {
+            this.worldRenderer.updateTerrain(base);
+            ((EntityPlayer)base).hasMoved = true;
+            ((EntityPlayer)base).X = -66666666;
+            ((EntityPlayer)base).Z = -66666666;
+            this.specialRefresh = true;
+            this.updateArea();   
+        }  
+        
+	        GL11.glEnable(GL11.GL_DEPTH_TEST);
+	        GL11.glEnable(GL11.GL_ALPHA_TEST);
+	        
+	        FNFKeybinds.updateWorldMap(base,this);
+	        
+	        EntityRenderer.viewMatrix = camera.createViewMatrix();
+	        EntityRenderer.viewMatrixTerrain = camera.createViewMatrixTerrain();
+	        
+	        EntityRenderer.reflectionViewMatrix = camera.createViewMatrixReflection();
+	        
+	
+        	
+	        if(this.worldRenderer != null)
+	        {
+	        	this.allRenderLists.setupRenderList(base.lastTickPosX+(base.posX-base.lastTickPosX)*ticker,base.lastTickPosY+(base.posY-base.lastTickPosY)*ticker,base.lastTickPosZ+(base.posZ-base.lastTickPosZ)*ticker);
+	        }
+	       
+	        if(this.prevMinute != IngameGui.miliSeconds)
+	        {
+	        	this.prevMinute = IngameGui.miliSeconds;
+	        }
+	        if(EntityRenderer.terrainRenderer != null && EntityRenderer.terrain != null && this.nmr.BodyParts.size() > 0)
+		    {
+		        EntityRenderer.terrainRenderer.render(0,EntityRenderer.viewMatrix,EntityRenderer.terrain,EntityRenderer.light,0F,10,true);
+		    }
+	        GL11.glDisable(GL30.GL_CLIP_DISTANCE0);
+	        if(LoadingScreenGui.renderObjectsInWorld && this.nmr != null)
+	        {
+	        	this.nmr.render(false, light, EntityRenderer.viewMatrix);
+	        }
+       
+        	if(this.skyRender!=null)
+        	{
+        		this.skyRender.render(light,false);
+        	}
+		}
+    	catch(Exception e)
+		{
+    		e.printStackTrace();
+		}
+     }
+ 
+	public void refraction()
+	{
+		if(this.terrain != null && this.light != null && this.terrainRenderer != null)
+		{
+	        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+	        GL11.glEnable(GL30.GL_CLIP_DISTANCE0);
+	        if(EntityRenderer.skyColor != null)
+	        {
+	        	GL11.glClearColor(EntityRenderer.skyColor[0], EntityRenderer.skyColor[1], EntityRenderer.skyColor[2], EntityRenderer.skyColor[3]);
+	        }
+		    GL11.glEnable(GL11.GL_DEPTH_TEST);
+		    GL11.glEnable(GL11.GL_ALPHA_TEST);
+		    GL11.glEnable(GL11.GL_CULL_FACE);
+		    
+		    if(EntityRenderer.terrainRenderer != null && EntityRenderer.terrain != null)
+		    {
+		        EntityRenderer.terrainRenderer.render(1,EntityRenderer.viewMatrixTerrain,EntityRenderer.terrain,EntityRenderer.light,0F,10,true);
+		    }
+		    
+	        if(LoadingScreenGui.renderObjectsInWorld && this.nmr != null)
+	        {
+	        	this.nmr.render(true, light, EntityRenderer.viewMatrixTerrain);
+	        }
+       
+        	if(this.skyRender!=null)
+        	{
+        		this.skyRender.render(light,false);
+        	}
+		}
+	}
+	
+	private long prevMinute = IngameGui.miliSeconds;
+
+	public static Matrix4f viewMatrix;
+	public static Matrix4f viewMatrixTerrain;
+	public static Matrix4f reflectionViewMatrix;
+	public static Matrix4f projectionMatrix;
+ 	public static float waterHeight = 150F;
+
+	public void updateArea()
+	{
+        this.moveArea(1, 5, this.worldRenderer.ArrayListTerrain5, this.worldRenderer.ArrayListTerrain6);
+        this.moveArea(1, 4, this.worldRenderer.ArrayListTerrain4, this.worldRenderer.ArrayListTerrain5);
+        this.moveArea(1, 6, this.worldRenderer.ArrayListTerrain6, this.worldRenderer.ArrayListTerrain4);
+        //
+        this.moveArea(1, 12, this.worldRenderer.ArrayListTerrain12, this.worldRenderer.ArrayListTerrain11);
+        this.moveArea(1, 7, this.worldRenderer.ArrayListTerrain7, this.worldRenderer.ArrayListTerrain12);
+        this.moveArea(1, 11, this.worldRenderer.ArrayListTerrain11, this.worldRenderer.ArrayListTerrain7);
+        //
+        this.moveArea(1, 9, this.worldRenderer.ArrayListTerrain9, this.worldRenderer.ArrayListTerrain10);
+        this.moveArea(1, 8, this.worldRenderer.ArrayListTerrain8, this.worldRenderer.ArrayListTerrain9);
+        this.moveArea(1, 10, this.worldRenderer.ArrayListTerrain10, this.worldRenderer.ArrayListTerrain8);
+        //
+        this.moveArea(2, 6, this.worldRenderer.ArrayListTerrain6, this.worldRenderer.ArrayListTerrain5);
+        this.moveArea(2, 4, this.worldRenderer.ArrayListTerrain4, this.worldRenderer.ArrayListTerrain6);
+        this.moveArea(2, 5, this.worldRenderer.ArrayListTerrain5, this.worldRenderer.ArrayListTerrain4);
+        //
+        this.moveArea(2, 11, this.worldRenderer.ArrayListTerrain11, this.worldRenderer.ArrayListTerrain12);
+        this.moveArea(2, 7, this.worldRenderer.ArrayListTerrain7, this.worldRenderer.ArrayListTerrain11);
+        this.moveArea(2, 12, this.worldRenderer.ArrayListTerrain12, this.worldRenderer.ArrayListTerrain7);
+        //
+        this.moveArea(2, 10, this.worldRenderer.ArrayListTerrain10, this.worldRenderer.ArrayListTerrain9);
+        this.moveArea(2, 8, this.worldRenderer.ArrayListTerrain8, this.worldRenderer.ArrayListTerrain10);
+        this.moveArea(2, 9, this.worldRenderer.ArrayListTerrain9, this.worldRenderer.ArrayListTerrain8);
+        //
+        this.moveArea(3, 8, this.worldRenderer.ArrayListTerrain7, this.worldRenderer.ArrayListTerrain8);
+        this.moveArea(3, 4, this.worldRenderer.ArrayListTerrain8, this.worldRenderer.ArrayListTerrain4);
+        this.moveArea(3, 7, this.worldRenderer.ArrayListTerrain4, this.worldRenderer.ArrayListTerrain7);
+        //
+        this.moveArea(3, 9, this.worldRenderer.ArrayListTerrain11, this.worldRenderer.ArrayListTerrain9);
+        this.moveArea(3, 5, this.worldRenderer.ArrayListTerrain9, this.worldRenderer.ArrayListTerrain5);
+        this.moveArea(3, 12, this.worldRenderer.ArrayListTerrain5, this.worldRenderer.ArrayListTerrain12);
+        //
+        this.moveArea(3, 10, this.worldRenderer.ArrayListTerrain11, this.worldRenderer.ArrayListTerrain10);
+        this.moveArea(3, 6, this.worldRenderer.ArrayListTerrain10, this.worldRenderer.ArrayListTerrain6);
+        this.moveArea(3, 11, this.worldRenderer.ArrayListTerrain6, this.worldRenderer.ArrayListTerrain11);
+        //
+        this.moveArea(4, 7, this.worldRenderer.ArrayListTerrain8, this.worldRenderer.ArrayListTerrain7);
+        this.moveArea(4, 4, this.worldRenderer.ArrayListTerrain7, this.worldRenderer.ArrayListTerrain4);
+        this.moveArea(4, 8, this.worldRenderer.ArrayListTerrain4, this.worldRenderer.ArrayListTerrain8);
+        
+        this.moveArea(4, 11, this.worldRenderer.ArrayListTerrain10, this.worldRenderer.ArrayListTerrain11);
+        this.moveArea(4, 6, this.worldRenderer.ArrayListTerrain11, this.worldRenderer.ArrayListTerrain6);
+        this.moveArea(4, 10, this.worldRenderer.ArrayListTerrain6, this.worldRenderer.ArrayListTerrain10);
+        //
+        this.moveArea(4, 9, this.worldRenderer.ArrayListTerrain5, this.worldRenderer.ArrayListTerrain9);
+        this.moveArea(4, 5, this.worldRenderer.ArrayListTerrain12, this.worldRenderer.ArrayListTerrain5);
+        this.moveArea(4, 12, this.worldRenderer.ArrayListTerrain9, this.worldRenderer.ArrayListTerrain12);	
+        if(this.specialRefresh){this.specialRefresh = false;}
+   }
+	
+	public static boolean specialRefresh = false;
+	
+	public void moveArea(int side,int areaNumber,List<ArrayListTerrain> listAfter,List<ArrayListTerrain> listTLoad)
+	{
+		EntityLivingBase base = TheStructureWorld.TheStructureWorld.renderViewEntity;
+		boolean refresh;
+		if(side==1&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posX-((10))) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) && Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) < Integer.parseInt(listAfter.get(0).AreaCode.split("_")[0])){refresh = true;}
+		else if(side==2&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posX + ((10))) > Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0]) && Integer.parseInt(listAfter.get(0).AreaCode.split("_")[0]) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[0])){refresh = true;}
+		else if(side==3&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posZ + ((10))) > Integer.parseInt(listAfter.get(0).AreaCode.split("_")[1]) && Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[1]) < Integer.parseInt(listAfter.get(0).AreaCode.split("_")[1])){refresh = true;}
+		else if(side==4&&!listTLoad.isEmpty()&&!listAfter.isEmpty()&&(((EntityPlayer)base).posZ - ((10))) < Integer.parseInt(listAfter.get(0).AreaCode.split("_")[1]) && Integer.parseInt(listAfter.get(0).AreaCode.split("_")[1]) < Integer.parseInt(listTLoad.get(0).AreaCode.split("_")[1])){refresh = true;}
+		else{refresh = false;}
+		if(refresh||this.specialRefresh)
+		{
+		String[] coordsZ = listAfter.get(0).AreaCode.split("_");
+		String[] coordsX = listTLoad.get(0).AreaCode.split("_");
+		if(refresh||this.specialRefresh){if(areaNumber==4){this.worldRenderer.clear4();}if(areaNumber==5){this.worldRenderer.clear5();}if(areaNumber==6){this.worldRenderer.clear6();}if(areaNumber==7){this.worldRenderer.clear7();}if(areaNumber==8){this.worldRenderer.clear8();}if(areaNumber==9){this.worldRenderer.clear9();}if(areaNumber==10){this.worldRenderer.clear10();}if(areaNumber==11){this.worldRenderer.clear11();}if(areaNumber==12){this.worldRenderer.clear12();}}
+		
+		List<ArrayListTerrain> ground;
+		if(areaNumber==4)
+		{
+			ground = this.worldRenderer.ArrayListTerrain4;	
+		}
+		else if(areaNumber==5)
+		{
+			ground = this.worldRenderer.ArrayListTerrain5;
+		}
+		else if(areaNumber==6)
+		{
+			ground = this.worldRenderer.ArrayListTerrain6;
+		}
+		else if(areaNumber==7)
+		{
+			ground = this.worldRenderer.ArrayListTerrain7;
+		}
+		else if(areaNumber==8)
+		{
+			ground = this.worldRenderer.ArrayListTerrain8;
+		}
+		else if(areaNumber==9)
+		{
+			ground = this.worldRenderer.ArrayListTerrain9;
+		}
+		else if(areaNumber==10)
+		{
+			ground = this.worldRenderer.ArrayListTerrain10;
+		}
+		else if(areaNumber==11)
+		{
+			ground = this.worldRenderer.ArrayListTerrain11;
+		}
+		else if(areaNumber==12)
+		{
+			ground = this.worldRenderer.ArrayListTerrain12;
+		}
+		else
+		{
+			ground = listAfter;
+		}
+		
+		if(side==1)
+		{
+			this.worldRenderer.splitIntoAreas(areaNumber,ground,base,Integer.parseInt(coordsX[0])-(10 + (renderDistance * 2)),Integer.parseInt(coordsZ[1]));
+		}
+		else if(side==2)
+		{
+			this.worldRenderer.splitIntoAreas(areaNumber,ground,base,Integer.parseInt(coordsX[0])+(10 + (renderDistance * 2)),Integer.parseInt(coordsZ[1]));
+		}
+		else if(side==3)
+		{
+			this.worldRenderer.splitIntoAreas(areaNumber,ground,base,Integer.parseInt(coordsX[0]),Integer.parseInt(coordsZ[1])+(10 + (renderDistance * 2)));
+		}
+		else if(side==4)
+		{
+			this.worldRenderer.splitIntoAreas(areaNumber,ground,base,Integer.parseInt(coordsX[0]),Integer.parseInt(coordsZ[1])-(10 + (renderDistance * 2)));
+		}		
+	    }  
+		if(areaNumber==4){Entity.coords4 = this.worldRenderer.ArrayListTerrain4.get(0).AreaCode.split("_");}
+		if(areaNumber==5){Entity.coords5 = this.worldRenderer.ArrayListTerrain5.get(0).AreaCode.split("_");}
+		if(areaNumber==6){Entity.coords6 = this.worldRenderer.ArrayListTerrain6.get(0).AreaCode.split("_");}
+		if(areaNumber==7){Entity.coords7 = this.worldRenderer.ArrayListTerrain7.get(0).AreaCode.split("_");}
+		if(areaNumber==8){Entity.coords8 = this.worldRenderer.ArrayListTerrain8.get(0).AreaCode.split("_");}
+		if(areaNumber==9){Entity.coords9 = this.worldRenderer.ArrayListTerrain9.get(0).AreaCode.split("_");}
+		if(areaNumber==10){Entity.coords10 = this.worldRenderer.ArrayListTerrain10.get(0).AreaCode.split("_");}
+		if(areaNumber==11){Entity.coords11 = this.worldRenderer.ArrayListTerrain11.get(0).AreaCode.split("_");}
+		if(areaNumber==12){Entity.coords12 = this.worldRenderer.ArrayListTerrain12.get(0).AreaCode.split("_");}	
+	}
+
+    /**
+     * set null to clear
+     */
+    public void setWorldAndLoadRenderers(WorldClient wordclient)
+    {
+        if (this.theWorld != null)
+        {
+            this.theWorld.removeWorldAccess(this);
+        }
+        this.theWorld = wordclient;
+        if (wordclient != null)
+        {
+        	wordclient.addWorldAccess(this);
+        }
+    }
+
+    public void onEntityCreate(Entity e) {}
+    public void onEntityDestroy(Entity e) {}
+}

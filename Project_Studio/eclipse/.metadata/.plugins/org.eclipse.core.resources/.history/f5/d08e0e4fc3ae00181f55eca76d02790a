@@ -1,0 +1,102 @@
+package nl.thestructureworld.client.gui;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Random;
+import org.apache.commons.io.FileUtils;
+import org.lwjgl.opengl.GL11;
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.renderer.Tessellator;
+import nl.thestructureworld.client.renderer.entity.ModelBasic;
+
+public class LoadingScreenGui extends GuiScreen
+{
+    private static final Random rand = new Random();
+
+    public LoadingScreenGui()
+    {
+    	this.backGroundTexture = "/menu/loading screen.png";
+    }
+    
+    /**
+     * Returns true if this GUI should pause the game when it is displayed in single-player
+     */
+    public boolean doesGuiPauseGame()
+    {
+        return true;    
+    }
+    
+   
+    
+    @Override
+    protected void keyTyped(char c, int p)
+    {
+    }
+    
+    public void getHint() throws IOException
+    {
+    	int hintsMax = Integer.parseInt((""+FileUtils.readLines(new File(FileBasicJava.source,"/The Structure World/Hints.txt ")).get(0)).replace("Lines: ", ""));
+    	String line = FileUtils.readLines(new File(FileBasicJava.source,"/The Structure World/Hints.txt ")).get(this.rand.nextInt(hintsMax)+1);
+    	this.hint = line;
+    }
+    
+    
+    /**
+     * Checks if the FPS goes up again indicating the game is done loading all the textures, models, shader, (texture)maps etc etc
+     */
+    private int enterWorld = 0;
+	private boolean secondspassed;
+	private long second;
+	public static double loadOnWorldLoad = 0;
+	public String hint;
+
+    
+    
+	
+    /**
+     * Draws the screen and all the components in it.
+     */
+    public void drawScreen(int x, int y, float f)
+    {
+    	super.drawScreen(x, y, f);
+        if(this.loadOnWorldLoad==0&&this.thestructureworld.getScreenLock())
+        {
+        	try 
+        	{
+				this.getHint();
+				ModelBasic.loadTerraintextures("blendMap","objectsandterrain/Ground/Stone","objectsandterrain/Ground/Grass "+IngameMenuAndOptionsGui.basicTerrain,"objectsandterrain/Ground/Sand "+IngameMenuAndOptionsGui.basicTerrain,"objectsandterrain/Ground/Ground Terrain "+IngameMenuAndOptionsGui.basicTerrain);
+			} 
+        	catch (IOException e) 
+			{
+				e.printStackTrace();
+			}
+        }
+  
+        if(System.nanoTime() > this.second+50000000)
+        {
+        this.secondspassed = true;
+        this.second = System.nanoTime();
+        }
+        if(this.loadOnWorldLoad > 100)
+        {
+        	++EntityRenderer.onWorldLoaded;
+        	this.thestructureworld.setScreenUnLock();
+        	return;
+        }
+        String[] splitText = hint.split("#");
+        
+        this.drawCenteredStringWithColor(fontRendererObj,splitText[0].replace("#", ""), 330, 328, 1F, 1F, 1F, 1.0F);
+        
+        if(splitText.length>1){this.drawCenteredStringWithColor(fontRendererObj,splitText[1], 330, 345, 1F, 1F, 1F, 1.0F);}
+        
+        if(this.secondspassed){++this.loadOnWorldLoad;this.secondspassed=false;}
+    }
+    
+    
+    
+    
+}

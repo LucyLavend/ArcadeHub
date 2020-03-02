@@ -1,0 +1,52 @@
+package nl.thestructureworld.client.renderer.entity;
+
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.entity.player.EntityPlayer;
+
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+ 
+public class EntityPlantRender extends BasicEntityRender
+{
+	public String seed = TheStructureWorld.TheStructureWorld.theWorld.getStructureWorldInfo().seed;
+	
+	public EntityPlantRender(float[] textureCoords,float[] position,float reflecY, float rotX, float rotY, float rotZ,float scale) 
+    {
+		super(new ModelBasic(false,0,10,0.3F,0,"objectsandterrain/plants",new Vector4f(0.5F,1.5F,0F,0F),100,false,true),position,rotX,rotY,rotZ,reflecY,scale);
+		this.textureCoords = textureCoords;
+		this.rotX = rotX;
+        this.rotY = rotY;
+        this.rotZ = rotZ;
+        this.reflecY = reflecY;
+        this.scale = scale;
+        this.GenerateFromSeed();
+   }
+	
+	
+	public void GenerateFromSeed()
+	{
+		String coords = ""+(position.x*position.y*position.z);
+		float C =  (seed.charAt(coords.length()/3))/(coords.charAt(seed.length()/5))-1;
+		if(C<0){C=0;}
+		this.scale += C;
+		this.rotY += C*1000F;
+	}
+	
+	public float ObjectDistanceTest = 0;
+	public EntityPlayer p = TheStructureWorld.TheStructureWorld.thePlayer;
+		
+	 public void addAnimation()
+	 {
+		 float X = (float)(p.posX - this.position.getX());
+		 float Y = (float)(p.posY - this.position.getY());
+		 float Z = (float)(p.posZ - this.position.getZ());
+		 this.ObjectDistanceTest = (X*Y*Z)/3;
+		 if(p.hasMoved)
+		 {
+		 System.out.print("Distance: "+this.ObjectDistanceTest);
+		 }
+		 if(this.ObjectDistanceTest>0.99F){++this.rotY;}
+	 }
+	
+}

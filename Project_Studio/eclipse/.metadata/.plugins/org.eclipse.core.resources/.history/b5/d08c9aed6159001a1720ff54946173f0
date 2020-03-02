@@ -1,0 +1,13 @@
+package nl.miystengine.client.gui;
+
+import nl.miystengine.client.MiystEngine;
+
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.Display;
+
+
+public class FBORenderer
+{	
+	public MiystEngine ttw = MiystEngine.miystengine;
+	

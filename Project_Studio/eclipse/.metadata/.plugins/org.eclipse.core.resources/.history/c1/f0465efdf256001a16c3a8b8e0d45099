@@ -1,0 +1,153 @@
+package nl.miystengine.client.gui;
+
+import game.GameMain;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+
+import nl.miystengine.client.MiystEngine;
+
+public class LoadingScreenMainMenu extends ScreenGui
+{
+	   private float guiLoaded = 0;
+	   private String loadingInformation;
+	   private String miystNameSymbols;
+	   private String miystName;
+	   private boolean activateSymbolsToText;
+	   private float symbolsToText;
+	   private MainMenuGui menu;
+	   
+	   public LoadingScreenMainMenu()
+	   {
+	    	this.backGroundTexture = "/menu/loading screen.png";
+	    	this.miystNameSymbols = "/menu/myist_name.png";
+	    	this.miystName = "/menu/myist_name_E.png";
+	    	this.activateSymbolsToText = false;
+	    	this.symbolsToText = 0F;
+	   }
+   
+	   @Override
+	    /**
+	     * Draws the screen and all the components in it.
+	     */
+	    public void drawScreen(int x, int y)
+	    {
+	    	
+	    	if(this.guiLoaded < this.maxTimeLoader)
+			{
+	    		GL11.glPushMatrix();
+		    	if(this.guiLoaded < 100)
+		    	{
+		    		GL11.glColor3f(this.guiLoaded / 100F, this.guiLoaded / 100F, this.guiLoaded / 100F);
+		    	}
+		    	else
+		    	{
+		    		GL11.glColor3f(1F, 1F, 1F);
+		    		this.activateSymbolsToText = true;
+		    	}
+		    	
+		        this.drawTexturedNoColor(0, 0, this.width,this.height ,0,0, this.backGroundTexture);
+		        
+		    	GL11.glColor4f(1F - this.symbolsToText,1F - this.symbolsToText,1F - this.symbolsToText,1F - this.symbolsToText);
+		    	this.drawTexturedNoColor(0, 0, this.width,this.height ,0,0, this.miystNameSymbols);
+		    	
+		    	
+		    	GL11.glBindTexture(GL11.GL_TEXTURE_2D, GameMain.texture);
+		    	this.drawTexturedNoTexture(0, 0, this.width,this.height ,0,0);
+		    	
+	
+		    	GL11.glColor4f(this.symbolsToText,this.symbolsToText,this.symbolsToText,this.symbolsToText);
+		    	this.drawTexturedNoColor(0, 0, this.width,this.height ,0,0, this.miystName);
+	
+		        GL11.glEnable(GL11.GL_BLEND);
+		        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+		        this.drawCenteredStringWithColor(this.fontRendererObj,this.loadingInformation, this.width / 2, (int)(this.height / 1.1), 0.9F, 0.9F, 0.9F, 0.9F);
+		        GL11.glPopMatrix();
+			}
+	    	else
+	    	{
+	    		GL11.glPushMatrix();
+	    		this.drawTexturedNoColor(0, 0, this.width,this.height ,0,0, this.backGroundTexture);   
+			    float color = this.fadeOut;
+			    this.fadeOut -= 0.001F;
+			    GL11.glColor4f(color,color,color,color);
+			    this.drawTexturedNoColor(0, 0, this.width,this.height ,0,0, this.miystName);
+			    GL11.glEnable(GL11.GL_BLEND);
+			    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+			    this.drawCenteredStringWithColor(this.fontRendererObj,this.loadingInformation, this.width / 2, (int)(this.height / 1.1), 0.9F, 0.9F, 0.9F, 0.9F);
+			    GL11.glPopMatrix();
+		        if(this.fadeOut < 0F)
+				{
+					MiystEngine.miystengine.displayScreenGui(new MainMenuGui());
+				}
+	    	}
+	    	
+	        this.preLoadForMainMenu();
+	    }
+	   
+	   @Override
+	   public void updateOnSeconds()
+	   {
+		   if(this.guiLoaded < this.maxTimeLoader + 101)
+		   {
+				++this.guiLoaded;
+		   }
+		   
+		   if(this.guiLoaded < this.maxTimeLoader)
+		   {
+			   if(this.activateSymbolsToText)
+			   {
+		        	if(this.symbolsToText < 1F)
+		        	{
+		        		this.symbolsToText += 0.01F;
+		        	}
+		    	}
+		   }
+		   else
+		   {
+			    if(this.activateSymbolsToText)
+			    {
+			        if(this.symbolsToText < 1F)
+			        {
+			        	this.symbolsToText += 0.01F;
+			        }
+			    }
+		   }
+	   }
+	   
+  private float fadeOut = 1F;	
+  private int maxTimeLoader = 300;
+	
+   
+   public void preLoadForMainMenu()
+   {
+		if(this.guiLoaded == 5)
+		{
+			try
+			{
+				if(MiystEngine.miystengine.thePlayer != null)
+				{
+					MiystEngine.miystengine.thePlayer.coordCode = (int)(MiystEngine.miystengine.thePlayer.posX+MiystEngine.miystengine.thePlayer.posY+MiystEngine.miystengine.thePlayer.posZ);
+				}
+				MiystEngine.miystengine.entityRenderer.camera.FOV = 115F;
+				MiystEngine.miystengine.entityRenderer.camera.Aspect = (float)MiystEngine.miystengine.displayWidth / (float)MiystEngine.miystengine.displayHeight;
+				MiystEngine.miystengine.entityRenderer.camera.zNear = 0.1F;
+				MiystEngine.miystengine.entityRenderer.camera.zFar = 1000F;
+				MiystEngine.miystengine.entityRenderer.camera.FOVstandard = MiystEngine.miystengine.entityRenderer.camera.FOV;
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		}
+		else if(this.guiLoaded == 10)
+		{
+		  	MiystEngine.miystengine.entityRenderer.camera.projectionMatrix();
+		}
+		
+		if(this.guiLoaded > 10 && Keyboard.isKeyDown(Keyboard.KEY_SPACE))
+		{
+			MiystEngine.miystengine.displayScreenGui(new MainMenuGui());
+		}
+	}
+}

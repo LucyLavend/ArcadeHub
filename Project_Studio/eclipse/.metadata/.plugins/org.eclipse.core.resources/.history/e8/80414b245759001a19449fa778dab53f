@@ -1,0 +1,121 @@
+package nl.miystengine.client.multiplayer;
+
+import io.netty.util.concurrent.GenericFutureListener;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import nl.miystengine.client.GameProfile;
+import nl.miystengine.client.MiystEngine;
+import nl.miystengine.client.gui.MainMenuGui;
+import nl.miystengine.client.gui.ScreenGui;
+import nl.miystengine.entity.Entity;
+import nl.miystengine.entity.EntityClientPlayerMP;
+import nl.miystengine.entity.EntityLivingBase;
+import nl.miystengine.entity.EntityLivingBase;
+import nl.miystengine.server.management.EnumConnectionState;
+import nl.miystengine.server.management.INetHandlerPlayClient;
+import nl.miystengine.server.management.NetworkManager;
+import nl.miystengine.util.MathHelper;
+import nl.miystengine.world.StructureWorldInfo;
+import nl.miystengine.world.WorldProvider;
+import nl.miystengine.world.SettingsOfStructureWorld;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import com.google.common.base.Charsets;
+
+public class NetHandlerPlayClient implements INetHandlerPlayClient
+{
+    private static final Logger logger = LogManager.getLogger();
+
+    /**
+     * The NetworkManager instance used to communicate with the server (used only by handlePlayerPosLook to update
+     * positioning and handleJoinGame to inform the server of the client distribution/mods)
+     */
+    private final NetworkManager netManager;
+
+    /**
+     * Reference to the MiystEngine instance, which many handler methods operate on
+     */
+    private MiystEngine gameController;
+
+    /**
+     * Reference to the current ClientWorld instance, which many handler methods operate on
+     */
+    private WorldClient clientWorldController;
+
+    /**
+     * True if the client has finished downloading terrain and may spawn. Set upon receipt of S08PacketPlayerPosLook,
+     * reset upon respawning
+     */
+    private boolean doneLoadingTerrain;
+
+    /**
+     * A mapping from player names to their respective GuiPlayerInfo (specifies the clients response time to the server)
+     */
+    private Map playerInfoMap = new HashMap();
+
+    /**
+     * An ArrayList of GuiPlayerInfo (includes all the players' GuiPlayerInfo on the current server)
+     */
+    public List playerInfoList = new ArrayList();
+    public int currentServerMaxPlayers = 20;
+
+    /**
+     * Seems to be either null (integrated server) or an instance of either GuiMultiplayer (when connecting to a server)
+     * or ScreenGuiReamlsTOS (when connecting to tswO server)
+     */
+    private ScreenGui ScreenGuiServer;
+    private boolean field_147308_k = false;
+
+    public NetHandlerPlayClient(MiystEngine gen_functioni_i45061_1_, ScreenGui gen_functioni_i45061_2_, NetworkManager gen_functioni_i45061_3_)
+    {
+        this.gameController = gen_functioni_i45061_1_;
+        this.ScreenGuiServer = gen_functioni_i45061_2_;
+        this.netManager = gen_functioni_i45061_3_;
+    }
+
+    /**
+     * Clears the WorldClient instance associated with this NetHandlerPlayClient
+     */
+    public void cleanup()
+    {
+        this.clientWorldController = null;
+    }
+
+    public void onNetworkTick() {}
+
+    /**
+     * Invoked when disconnecting, the parameter is a ChatComponent describing the reason for termination
+     */
+    public void onDisconnect(String gen_functioni_147231_1_)
+    {
+        this.gameController.loadStructureWorld((WorldClient)null);
+    }
+
+    /**
+     * Allows validation of the connection state transition. Parameters: from, to (connection state). Typically throws
+     * IllegalStateException or UnsupportedOperationException if validation fails
+     */
+    public void onConnectionStateTransition(EnumConnectionState gen_functioni_147232_1_, EnumConnectionState gen_functioni_147232_2_)
+    {
+        throw new IllegalStateException("Unexpected protocol change!");
+    }
+
+
+    /**
+     * Returns this the NetworkManager instance registered with this NetworkHandlerPlayClient
+     */
+    public NetworkManager getNetworkManager()
+    {
+        return this.netManager;
+    }
+
+
+
+}

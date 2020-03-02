@@ -1,0 +1,1349 @@
+package nl.thestructureworld.entity.player;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Multisets;
+
+import nl.thestructureworld.account.GameProfile;
+
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.UUID;
+
+import org.lwjgl.input.Keyboard;
+
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.shaders.Matrix;
+import nl.thestructureworld.entity.CreatureTypeEnum;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityItem;
+import nl.thestructureworld.entity.EntityList;
+import nl.thestructureworld.entity.EntityLivingBase;
+import nl.thestructureworld.event.ClickEvent;
+import nl.thestructureworld.inventory.Container;
+import nl.thestructureworld.inventory.ContainerPlayer;
+import nl.thestructureworld.inventory.IInventory;
+import nl.thestructureworld.item.EnumAction;
+import nl.thestructureworld.item.Item;
+import nl.thestructureworld.item.ItemData;
+import nl.thestructureworld.item.Items;
+import nl.thestructureworld.nbt.NBTTagCompound;
+import nl.thestructureworld.nbt.NBTTagList;
+import nl.thestructureworld.network.Packet;
+import nl.thestructureworld.server.TheStructureWorldServer;
+import nl.thestructureworld.terrainandobjects.TerrainObject;
+import nl.thestructureworld.terrainandobjects.MapColor;
+import nl.thestructureworld.terrainandobjects.Material;
+import nl.thestructureworld.tileentity.TileEntity;
+import nl.thestructureworld.util.AxisAlignedBB;
+import nl.thestructureworld.util.AreaCoordinates;
+import nl.thestructureworld.util.DamageSource;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.util.Vec3;
+import nl.thestructureworld.world.World;
+import nl.thestructureworld.world.WorldServer;
+import nl.thestructureworld.world.WorldSettings;
+import nl.thestructureworld.world.WorldSettings.GameType;
+import nl.thestructureworld.world.area.Area;
+import nl.thestructureworld.world.area.IAreaProvider;
+
+public abstract class EntityPlayer extends EntityLivingBase
+{
+	public InventoryPlayer inventory = new InventoryPlayer(this);
+    public Container inventoryContainer;
+    public Container openContainer;
+    protected int flyToggleTimer;
+    public float prevCameraYaw;
+    public float cameraLookYaw;
+    protected boolean sleeping;
+    public AreaCoordinates playerLocation;
+    private AreaCoordinates spawnArea;
+    private boolean spawnForced;
+    public PlayercapAbilities capAbilities = new PlayercapAbilities();
+    private ItemData itemInUse;
+    private int itemInUseCount;
+    protected float speedOnGround = 0.1F;
+    protected float speedInAir = 0.02F;
+    private final GameProfile profile;
+    public int walkType = 0;
+  
+    public EntityPlayer(World world, GameProfile p_i45324_2_)
+    {
+        super(world);
+        this.entityUniqueID = func_146094_a(p_i45324_2_);
+        this.profile = p_i45324_2_;
+        this.inventoryContainer = new ContainerPlayer(this.inventory, !world.isClient, this);
+        this.openContainer = this.inventoryContainer;
+        this.eyeOffset = 1.62F;
+        AreaCoordinates var3 = world.getSpawnPoint();
+        this.setLocationAndAngles((double)var3.posX + 0.5D, (double)(var3.posY + 1), (double)var3.posZ + 0.5D, 0.0F, 0.0F);
+        this.setCreatureTypeEnum(CreatureTypeEnum.PLAYER);
+        this.weightOfCreature = 90.0F;
+        this.noClip = capAbilities.noClip;
+    }
+
+    protected void entityInit()
+    {
+        super.entityInit();
+        this.dataWatcher.addObject(16, Byte.valueOf((byte)0));
+        this.dataWatcher.addObject(17, Float.valueOf(0.0F));
+        this.dataWatcher.addObject(18, Integer.valueOf(0));
+    }
+
+    /**
+     * returns the ItemData containing the itemInUse
+     */
+    public ItemData getItemInUse()
+    {
+        return this.itemInUse;
+    }
+
+    /**
+     * Returns the item in use count
+     */
+    public int getItemInUseCount()
+    {
+        return this.itemInUseCount;
+    }
+
+    /**
+     * Checks if the entity is currently using an item (e.g., bow, food, sword) by holding down the useItemButton
+     */
+    public boolean isUsingItem()
+    {
+        return this.itemInUse != null;
+    }
+
+    /**
+     * gets the duration for how long the current itemInUse has been in use
+     */
+    public int getItemInUseDuration()
+    {
+        return this.isUsingItem() ? this.itemInUse.getMaxItemUseDuration() - this.itemInUseCount : 0;
+    }
+
+    public void stopUsingItem()
+    {
+        if (this.itemInUse != null)
+        {
+            this.itemInUse.onPlayerStoppedUsing(this.worldObj, this, this.itemInUseCount);
+        }
+
+        this.clearItemInUse();
+    }
+
+    public void clearItemInUse()
+    {
+        this.itemInUse = null;
+        this.itemInUseCount = 0;
+
+        if (!this.worldObj.isClient)
+        {
+            this.setEating(false);
+        }
+    }
+
+    public boolean isTerrainObjecting()
+    {
+        return this.isUsingItem() && this.itemInUse.getItem().getItemUseAction(this.itemInUse) == EnumAction.TerrainObject;
+    }
+    
+   
+  
+    
+    /**
+     * Called to update the entity's position/logic.
+     */
+    public void onUpdate()
+    {
+    	if(this.WalkSpeed != this.capAbilities.getWalkSpeed() && this.capAbilities.getWalkSpeed() > 0.34F)
+    	{
+    		this.WalkSpeed = this.capAbilities.getWalkSpeed();
+    	}
+        if (this.itemInUse != null)
+        {
+            ItemData var1 = this.inventory.getCurrentItem();
+
+            if (var1 == this.itemInUse)
+            {
+                if (this.itemInUseCount <= 25 && this.itemInUseCount % 4 == 0)
+                {
+                    this.updateItemUse(var1, 5);
+                }
+
+                if (--this.itemInUseCount == 0 && !this.worldObj.isClient)
+                {
+                    this.onItemUseFinish();
+                }
+            }
+            else
+            {
+                this.clearItemInUse();
+            }
+        }
+       
+        super.onUpdate();
+        this.move();
+        if (!this.worldObj.isClient && this.openContainer != null && !this.openContainer.canInteractWith(this))
+        {
+            this.closeScreen();
+            this.openContainer = this.inventoryContainer;
+        }
+    }
+
+    protected String getSwimSound()
+    {
+        return "game.player.swim";
+    }
+
+    protected String getSplashSound()
+    {
+        return "game.player.swim.splash";
+    }
+
+    public void playSound(String p_85030_1_, float p_85030_2_, float p_85030_3_)
+    {
+        this.worldObj.playSoundToNearExcept(this, p_85030_1_, p_85030_2_, p_85030_3_);
+    }
+
+    /**
+     * Plays sounds and makes particles for item in use state
+     */
+    protected void updateItemUse(ItemData p_71010_1_, int p_71010_2_)
+    {
+      
+    }
+
+    /**
+     * Used for when item use count runs out, ie: eating completed
+     */
+    protected void onItemUseFinish()
+    {
+        if (this.itemInUse != null)
+        {
+            this.updateItemUse(this.itemInUse, 16);
+            int var1 = this.itemInUse.stackSize;
+            ItemData var2 = this.itemInUse.onFoodEaten(this.worldObj, this);
+
+            if (var2 != this.itemInUse || var2 != null && var2.stackSize != var1)
+            {
+                this.inventory.mainInventory[this.inventory.currentItem] = var2;
+
+                if (var2.stackSize == 0)
+                {
+                    this.inventory.mainInventory[this.inventory.currentItem] = null;
+                }
+            }
+
+            this.clearItemInUse();
+        }
+    }
+
+    public void handleHealthUpdate(byte p_70103_1_)
+    {
+        if (p_70103_1_ == 9)
+        {
+            this.onItemUseFinish();
+        }
+        else
+        {
+            super.handleHealthUpdate(p_70103_1_);
+        }
+    }
+
+    /**
+     * Dead and sleeping entities cannot move
+     */
+    protected boolean isMovementTerrainObjected()
+    {
+        return this.getHealth() <= 0.0F || this.isPlayerSleeping();
+    }
+
+    /**
+     * set current crafting inventory back to the 2x2 square
+     */
+    public void closeScreen()
+    {
+        this.openContainer = this.inventoryContainer;
+    }
+
+    /**
+     * Called when a player mounts an entity. e.g. mounts a pig, mounts a boat.
+     */
+    public void mountEntity(Entity p_70078_1_)
+    {
+        if (this.ridingEntity != null && p_70078_1_ == null)
+        {
+            if (!this.worldObj.isClient)
+            {
+                this.dismountEntity(this.ridingEntity);
+            }
+
+            if (this.ridingEntity != null)
+            {
+                this.ridingEntity.riddenByEntity = null;
+            }
+
+            this.ridingEntity = null;
+        }
+        else
+        {
+            super.mountEntity(p_70078_1_);
+        }
+    }
+
+    /**
+     * Handles updating while being ridden by an entity
+     */
+    public void updateRidden()
+    {
+            double var1 = this.posX;
+            double var3 = this.posY;
+            double var5 = this.posZ;
+            float var7 = this.rotationYaw;
+            float var8 = this.rotationPitch;
+            super.updateRidden();
+            this.prevCameraYaw = this.cameraLookYaw;
+            this.cameraLookYaw = 0.0F;
+            this.addMountedMovementStat(this.posX - var1, this.posY - var3, this.posZ - var5);
+    }
+
+    protected void updateEntityActionState()
+    {
+        super.updateEntityActionState();
+        this.updateArmSwingProgress();
+    }
+    
+  
+    /**
+     * Called frequently so the entity can update its state every tick as required.
+     */
+    public void onLivingUpdate()
+    {
+        if (this.flyToggleTimer > 0)
+        {
+            --this.flyToggleTimer;
+        }
+
+        if (this.worldObj.difficultySetting.contains("Peaceful") && this.getHealth() < this.getMaxHealth() && this.ticksExisted % 20 * 12 == 0)
+        {
+            this.heal(1.0F);
+        }
+        
+        this.prevCameraYaw = this.cameraLookYaw;
+        super.onLivingUpdate();
+
+        this.jumpMovementFactor = this.speedInAir;
+
+        if(this.isRunning())
+        {
+            this.jumpMovementFactor = (float)((double)this.jumpMovementFactor + (double)this.speedInAir * 0.3D);
+        }
+        
+        this.setAIMoveSpeed((float)this.MoveSpeed);
+        float var2 = MathHelper.sqrt_double(this.motionX * this.motionX + this.motionZ * this.motionZ);
+        float var3 = (float)Math.atan(-this.motionY * 0.20000000298023224D) * 15.0F;
+
+        if (var2 > 0.1F)
+        {
+            var2 = 0.1F;
+        }
+
+        if (!this.onGround || this.getHealth() <= 0.0F)
+        {
+            var2 = 0.0F;
+        }
+
+        if (this.onGround || this.getHealth() <= 0.0F)
+        {
+            var3 = 0.0F;
+        }
+
+        this.cameraLookYaw += (var2 - this.cameraLookYaw) * 0.4F;
+        this.cameraPitch += (var3 - this.cameraPitch) * 0.8F;
+
+        if (this.getHealth() > 0.0F)
+        {
+            AxisAlignedBB var4 = null;
+
+            if (this.ridingEntity != null && !this.ridingEntity.isDead)
+            {
+                var4 = this.boundingBox.func_111270_a(this.ridingEntity.boundingBox).expand(1.0D, 0.0D, 1.0D);
+            }
+            else
+            {
+                var4 = this.boundingBox.expand(1.0D, 0.5D, 1.0D);
+            }
+
+            List var5 = this.worldObj.getEntitiesWithinAABBExcludingEntity(this, var4);
+
+            if (var5 != null)
+            {
+                for (int var6 = 0; var6 < var5.size(); ++var6)
+                {
+                    Entity var7 = (Entity)var5.get(var6);
+
+                    if (!var7.isDead)
+                    {
+                        this.collideWithPlayer(var7);
+                    }
+                }
+            }
+        }
+    }
+
+    private void collideWithPlayer(Entity p_71044_1_)
+    {
+        p_71044_1_.onCollideWithPlayer(this);
+    }
+
+    /**
+     * Called when the mob's health reaches 0.
+     */
+    public void onDeath(DamageSource p_70645_1_)
+    {
+        super.onDeath(p_70645_1_);
+        this.setSize(0.2F,0.2F, 0.2F);
+        this.setPosition(this.posX, this.posY, this.posZ);
+        this.motionY = 0.10000000149011612D;
+        if (p_70645_1_ != null)
+        {
+            this.motionX = (double)(-MathHelper.cos((this.attackedAtYaw + this.rotationYaw) * (float)Math.PI / 180.0F) * 0.1F);
+            this.motionZ = (double)(-MathHelper.sin((this.attackedAtYaw + this.rotationYaw) * (float)Math.PI / 180.0F) * 0.1F);
+        }
+        else
+        {
+            this.motionX = this.motionZ = 0.0D;
+        }
+
+        this.eyeOffset = 0.1F;
+     }
+
+    /**
+     * Returns the sound this mob makes when it is hurt.
+     */
+    protected String getHurtSound()
+    {
+        return "game.player.hurt";
+    }
+
+    /**
+     * Returns the sound this mob makes on death.
+     */
+    protected String getDeathSound()
+    {
+        return "game.player.die";
+    }
+
+  
+
+    /**
+     * Called when player presses the drop item key
+     */
+    public EntityItem dropOneItem(boolean p_71040_1_)
+    {
+        return this.func_146097_a(this.inventory.decrStackSize(this.inventory.currentItem, p_71040_1_ && this.inventory.getCurrentItem() != null ? this.inventory.getCurrentItem().stackSize : 1), false, true);
+    }
+
+    /**
+     * Args: ItemData, flag
+     */
+    public EntityItem dropPlayerItemWithRandomChoice(ItemData p_71019_1_, boolean p_71019_2_)
+    {
+        return this.func_146097_a(p_71019_1_, false, false);
+    }
+
+    public EntityItem func_146097_a(ItemData p_146097_1_, boolean p_146097_2_, boolean p_146097_3_)
+    {
+        if (p_146097_1_ == null)
+        {
+            return null;
+        }
+        else if (p_146097_1_.stackSize == 0)
+        {
+            return null;
+        }
+        else
+        {
+            EntityItem var4 = new EntityItem(this.worldObj, this.posX, this.posY - 0.30000001192092896D + (double)this.getEyeHeight(), this.posZ, p_146097_1_);
+            var4.delayBeforeCanPickup = 40;
+
+            if (p_146097_3_)
+            {
+                var4.func_145799_b(this.getCommandSenderName());
+            }
+
+            float var5 = 0.1F;
+            float var6;
+
+            if (p_146097_2_)
+            {
+                var6 = this.rand.nextFloat() * 0.5F;
+                float var7 = this.rand.nextFloat() * (float)Math.PI * 2.0F;
+                var4.motionX = (double)(-MathHelper.sin(var7) * var6);
+                var4.motionZ = (double)(MathHelper.cos(var7) * var6);
+                var4.motionY = 0.20000000298023224D;
+            }
+            else
+            {
+                var5 = 0.3F;
+                var4.motionX = (double)(-MathHelper.sin(this.rotationYaw / 180.0F * (float)Math.PI) * MathHelper.cos(this.rotationPitch / 180.0F * (float)Math.PI) * var5);
+                var4.motionZ = (double)(MathHelper.cos(this.rotationYaw / 180.0F * (float)Math.PI) * MathHelper.cos(this.rotationPitch / 180.0F * (float)Math.PI) * var5);
+                var4.motionY = (double)(-MathHelper.sin(this.rotationPitch / 180.0F * (float)Math.PI) * var5 + 0.1F);
+                var5 = 0.02F;
+                var6 = this.rand.nextFloat() * (float)Math.PI * 2.0F;
+                var5 *= this.rand.nextFloat();
+                var4.motionX += Math.cos((double)var6) * (double)var5;
+                var4.motionY += (double)((this.rand.nextFloat() - this.rand.nextFloat()) * 0.1F);
+                var4.motionZ += Math.sin((double)var6) * (double)var5;
+            }
+
+            this.joinEntityItemWithWorld(var4);
+           return var4;
+        }
+    }
+
+    /**
+     * Joins the passed in entity item with the world. Args: entityItem
+     */
+    protected void joinEntityItemWithWorld(EntityItem p_71012_1_)
+    {
+        this.worldObj.spawnEntityInWorld(p_71012_1_);
+    }
+
+    /**
+     * Returns how strong the player is against the specified TerrainObject at this moment
+     */
+    public float getCurrentPlayerStrVsTerrainObject(TerrainObject p_146096_1_, boolean p_146096_2_)
+    {
+        float var3 = this.inventory.func_146023_a(p_146096_1_);
+
+        if (var3 > 1.0F)
+        {
+            int var4 = 1;
+            ItemData var5 = this.inventory.getCurrentItem();
+
+            if (var4 > 0 && var5 != null)
+            {
+                float var6 = (float)(var4 * var4 + 1);
+
+                if (!var5.func_150998_b(p_146096_1_) && var3 <= 1.0F)
+                {
+                    var3 += var6 * 0.08F;
+                }
+                else
+                {
+                    var3 += var6;
+                }
+            }
+        }
+
+        if (!this.onGround)
+        {
+            var3 /= 5.0F;
+        }
+
+        return var3;
+    }
+
+    /**
+     * Checks if the player has the ability to harvest a TerrainObject (checks current inventory item for a tool if necessary)
+     */
+    public boolean canHarvestTerrainObject(TerrainObject p_146099_1_)
+    {
+        return this.inventory.func_146025_b(p_146099_1_);
+    }
+
+    /**
+     * (abstract) Protected helper method to read subclass entity data from NBT.
+     */
+    public void readEntityFromNBT(NBTTagCompound p_70037_1_)
+    {
+        super.readEntityFromNBT(p_70037_1_);
+        this.entityUniqueID = func_146094_a(this.profile);
+        NBTTagList var2 = p_70037_1_.getTagList("Inventory", 10);
+        this.inventory.readFromNBT(var2);
+        this.inventory.currentItem = p_70037_1_.getInteger("SelectedItemSlot");
+        this.sleeping = p_70037_1_.getBoolean("Sleeping");
+    
+        if (p_70037_1_.func_150297_b("SpawnX", 99) && p_70037_1_.func_150297_b("SpawnY", 99) && p_70037_1_.func_150297_b("SpawnZ", 99))
+        {
+            this.spawnArea = new AreaCoordinates(p_70037_1_.getInteger("SpawnX"), p_70037_1_.getInteger("SpawnY"), p_70037_1_.getInteger("SpawnZ"));
+            this.spawnForced = p_70037_1_.getBoolean("SpawnForced");
+        }
+
+        this.capAbilities.readcapAbilitiesFromNBT(p_70037_1_);
+    }
+
+    /**
+     * (abstract) Protected helper method to write subclass entity data to NBT.
+     */
+    public void writeEntityToNBT(NBTTagCompound p_70014_1_)
+    {
+        super.writeEntityToNBT(p_70014_1_);
+        p_70014_1_.setTag("Inventory", this.inventory.writeToNBT(new NBTTagList()));
+        p_70014_1_.setInteger("SelectedItemSlot", this.inventory.currentItem);
+        p_70014_1_.setBoolean("Sleeping", this.sleeping);
+      
+        if (this.spawnArea != null)
+        {
+            p_70014_1_.setInteger("SpawnX", this.spawnArea.posX);
+            p_70014_1_.setInteger("SpawnY", this.spawnArea.posY);
+            p_70014_1_.setInteger("SpawnZ", this.spawnArea.posZ);
+            p_70014_1_.setBoolean("SpawnForced", this.spawnForced);
+        }
+
+        this.capAbilities.writecapAbilitiesToNBT(p_70014_1_);
+    }
+    /**
+     * Displays the crafting GUI for a workbench.
+     */
+    public void displayGUIWorkbench(int p_71058_1_, int p_71058_2_, int p_71058_3_) {}
+
+   
+
+    /**
+     * sets the players height back to normal after doing things like sleeping and dieing
+     */
+    protected void resetHeight()
+    {
+        this.eyeOffset = 1.62F;
+    }
+
+    /**
+     * Called when the entity is attacked.
+     */
+    public boolean attackEntityFrom(DamageSource p_70097_1_, float p_70097_2_)
+    {
+        if (this.isEntityInvulnerable())
+        {
+            return false;
+        }
+        else if (this.capAbilities.disableDamage)
+        {
+            return false;
+        }
+        else if(!p_70097_1_.canHarmInForge())
+        {
+        	return false;
+        }
+        else
+        {
+            this.entityAge = 0;
+
+            if (this.getHealth() <= 0.0F)
+            {
+                return false;
+            }
+            else
+            {
+
+
+                if (p_70097_1_.isDifficultyScaled())
+                {
+                    if (this.worldObj.difficultySetting.contains("Peaceful"))
+                    {
+                        p_70097_2_ = 0.0F;
+                    }
+
+                    if (this.worldObj.difficultySetting.contains("Easy"))
+                    {
+                        p_70097_2_ = p_70097_2_ / 2.0F + 1.0F;
+                    }
+                    
+                    if (this.worldObj.difficultySetting.contains("Normal"))
+                    {
+                        p_70097_2_ = p_70097_2_ / 3.0F + 1.0F;
+                    }
+
+                    if (this.worldObj.difficultySetting.contains("Hard"))
+                    {
+                        p_70097_2_ = p_70097_2_ * 4.0F / 2.0F;
+                    }
+                }
+
+                if (p_70097_2_ == 0.0F)
+                {
+                    return false;
+                }
+                else
+                {
+                    Entity var3 = p_70097_1_.getEntity();
+
+           
+                    return super.attackEntityFrom(p_70097_1_, p_70097_2_);
+                }
+            }
+        }
+    }
+
+    public boolean canAttackPlayer(EntityPlayer p_96122_1_)
+    {
+    	return true;
+    }
+
+    protected void damageArmor(float p_70675_1_)
+    {
+        this.inventory.damageArmor(p_70675_1_);
+    }
+
+    /**
+     * Returns the current armor value as determined by a call to InventoryPlayer.getTotalArmorValue
+     */
+    public int getTotalArmorValue()
+    {
+        return this.inventory.getTotalArmorValue();
+    }
+
+    /**
+     * When searching for vulnerable players, if a player is invisible, the return value of this is the chance of seeing
+     * them anyway.
+     */
+    public float getArmorVisibility()
+    {
+        int var1 = 0;
+        ItemData[] var2 = this.inventory.armorInventory;
+        int var3 = var2.length;
+
+        for (int var4 = 0; var4 < var3; ++var4)
+        {
+            ItemData var5 = var2[var4];
+
+            if (var5 != null)
+            {
+                ++var1;
+            }
+        }
+
+        return (float)var1 / (float)this.inventory.armorInventory.length;
+    }
+
+    /**
+     * Deals damage to the entity. If its a EntityPlayer then will take damage from the armor first and then health
+     * second with the reduced value. Args: damageAmount
+     */
+    protected void damageEntity(DamageSource p_70665_1_, float p_70665_2_)
+    {
+        if (!this.isEntityInvulnerable())
+        {
+            if (!p_70665_1_.isUnTerrainObjectable() && this.isTerrainObjecting() && p_70665_2_ > 0.0F)
+            {
+                p_70665_2_ = (1.0F + p_70665_2_) * 0.5F;
+            }
+
+            p_70665_2_ = this.applyArmorCalculations(p_70665_1_, p_70665_2_);
+            float var3 = p_70665_2_;
+            p_70665_2_ = Math.max(p_70665_2_ - this.getAbsorptionAmount(), 0.0F);
+            this.setAbsorptionAmount(this.getAbsorptionAmount() - (var3 - p_70665_2_));
+
+            if (p_70665_2_ != 0.0F)
+            {
+                float var4 = this.getHealth();
+                this.setHealth(this.getHealth() - p_70665_2_);
+                this.func_110142_aN().func_94547_a(p_70665_1_, var4, p_70665_2_);
+            }
+        }
+    }
+
+    public void func_146100_a(TileEntity p_146100_1_) {}
+   
+
+    public boolean interactWith(Entity p_70998_1_)
+    {
+        ItemData var2 = this.getCurrentEquippedItem();
+        ItemData var3 = var2 != null ? var2.copy() : null;
+
+        if (!p_70998_1_.interactFirst(this))
+        {
+            if (var2 != null && p_70998_1_ instanceof EntityLivingBase)
+            {
+                if (this.capAbilities.instaDestroy)
+                {
+                    var2 = var3;
+                }
+
+                if (var2.interactWithEntity(this, (EntityLivingBase)p_70998_1_))
+                {
+                    if (var2.stackSize <= 0 && !this.capAbilities.instaDestroy)
+                    {
+                        this.destroyCurrentEquippedItem();
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        else
+        {
+            if (var2 != null && var2 == this.getCurrentEquippedItem())
+            {
+                if (var2.stackSize <= 0 && !this.capAbilities.instaDestroy)
+                {
+                    this.destroyCurrentEquippedItem();
+                }
+                else if (var2.stackSize < var3.stackSize && this.capAbilities.instaDestroy)
+                {
+                    var2.stackSize = var3.stackSize;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    /**
+     * Returns the currently being used item by the player.
+     */
+    public ItemData getCurrentEquippedItem()
+    {
+        return this.inventory.getCurrentItem();
+    }
+
+    /**
+     * Destroys the currently equipped item from the player's inventory.
+     */
+    public void destroyCurrentEquippedItem()
+    {
+        this.inventory.setInventorySlotContents(this.inventory.currentItem, (ItemData)null);
+    }
+
+    /**
+     * Returns the Y Offset of this entity.
+     */
+    public double geteyeOffset()
+    {
+        return (double)(this.eyeOffset - 0.5F);
+    }
+
+    /**
+     * Attacks for the player the targeted entity with the currently equipped item.  The equipped item has hitEntity
+     * called on it. Args: targetEntity
+     */
+    public void attackTargetEntityWithCurrentItem(Entity p_71059_1_)
+    {
+        if (p_71059_1_.canAttackWithItem())
+        {
+            if (!p_71059_1_.hitByEntity(this))
+            {
+                float var2 = this.AttackDamage;
+                int var3 = 0;
+                float var4 = 0.0F;
+
+                
+                if (this.isRunning())
+                {
+                    ++var3;
+                }
+
+                if (var2 > 0.0F || var4 > 0.0F)
+                {
+                    boolean var5 = this.fallDistance > 0.0F && !this.onGround&& this.ridingEntity == null && p_71059_1_ instanceof EntityLivingBase;
+
+                    if (var5 && var2 > 0.0F)
+                    {
+                        var2 *= 1.5F;
+                    }
+
+                    var2 += var4;
+                    boolean var6 = false;
+                    int var7 = 5;
+
+                    
+                    boolean var8 = p_71059_1_.attackEntityFrom(DamageSource.player, var2);
+
+                    if (var8)
+                    {
+                        if (var3 > 0)
+                        {
+                            p_71059_1_.addVelocity((double)(-MathHelper.sin(this.rotationYaw * (float)Math.PI / 180.0F) * (float)var3 * 0.5F), 0.1D, (double)(MathHelper.cos(this.rotationYaw * (float)Math.PI / 180.0F) * (float)var3 * 0.5F));
+                            this.motionX *= 0.6D;
+                            this.motionZ *= 0.6D;
+                            this.setRunning(false);
+                        }
+
+                        if (var5)
+                        {
+                            this.onCriticalHit(p_71059_1_);
+                        }
+
+                        this.setLastAttacker(p_71059_1_);
+
+                        ItemData var9 = this.getCurrentEquippedItem();
+                        Object var10 = p_71059_1_;
+
+                        if (var9 != null && var10 instanceof EntityLivingBase)
+                        {
+                            var9.hitEntity((EntityLivingBase)var10, this);
+
+                            if (var9.stackSize <= 0)
+                            {
+                                this.destroyCurrentEquippedItem();
+                            }
+                        }
+                       
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Called when the player performs a critical hit on the Entity. Args: entity that was hit critically
+     */
+    public void onCriticalHit(Entity p_71009_1_) {}
+
+    
+    /**
+     * Will get destroyed next tick.
+     */
+    public void setDead()
+    {
+        super.setDead();
+        this.inventoryContainer.onContainerClosed(this);
+
+        if (this.openContainer != null)
+        {
+            this.openContainer.onContainerClosed(this);
+        }
+    }
+
+    /**
+     * Checks if this entity is inside of an opaque TerrainObject
+     */
+    public boolean isEntityInsideOpaqueTerrainObject()
+    {
+        return !this.sleeping && super.isEntityInsideOpaqueTerrainObject();
+    }
+
+    /**
+     * Returns the GameProfile for this player
+     */
+    public GameProfile getGameProfile()
+    {
+        return this.profile;
+    }
+
+  
+ 
+
+    /**
+     * Ensure that a TerrainObject enabling respawning exists at the specified coordinates and find an empty space nearby to
+     * spawn.
+     */
+    public static AreaCoordinates verifyRespawnCoordinates(World world, AreaCoordinates areaCoords, boolean b)
+    {
+        	IAreaProvider var3 = world.getAreaProvider();
+        	var3.provideArea(areaCoords.posX - 3 >> 4,areaCoords.posY, areaCoords.posZ - 3 >> 4);
+        	var3.provideArea(areaCoords.posX + 3 >> 4, areaCoords.posZ - 3 >> 4);
+        	var3.provideArea(areaCoords.posX - 3 >> 4, areaCoords.posZ + 3 >> 4);
+        	var3.provideArea(areaCoords.posX + 3 >> 4, areaCoords.posZ + 3 >> 4);
+            Material var4 = world.getTerrainObject(areaCoords.posX, areaCoords.posY, areaCoords.posZ).getMaterial();
+            Material var5 = world.getTerrainObject(areaCoords.posX, areaCoords.posY + 1, areaCoords.posZ).getMaterial();
+            boolean var6 = !var4.isSolid();
+            boolean var7 = !var5.isSolid();
+            return b && var6 && var7 ? areaCoords : null;
+    }
+
+   
+
+    public void addChatComponentMessage(String p_146105_1_) {}
+
+    /**
+     * Returns the location of the bed the player will respawn at, or null if the player has not slept in a bed.
+     */
+    public AreaCoordinates getBedLocation()
+    {
+        return this.spawnArea;
+    }
+
+    public boolean isSpawnForced()
+    {
+        return this.spawnForced;
+    }
+
+    /**
+     * Defines a spawn coordinate to player spawn. Used by bed after the player sleep on it.
+     */
+    public void setSpawnArea(AreaCoordinates p_71063_1_, boolean p_71063_2_)
+    {
+        if (p_71063_1_ != null)
+        {
+            this.spawnArea = new AreaCoordinates(p_71063_1_);
+            this.spawnForced = p_71063_2_;
+        }
+        else
+        {
+            this.spawnArea = null;
+            this.spawnForced = false;
+        }
+    }
+
+    
+    /**
+     * Causes this entity to do an upwards motion (jumping).
+     */
+    public void jump()
+    {
+        super.jump();
+    }
+
+    /**
+     * Moves the entity based on the specified heading.  Args: strafe, forward
+     */
+    public void moveEntityWithHeading(float p_70612_1_, float p_70612_2_)
+    {
+        double var3 = this.posX;
+        double var5 = this.posY;
+        double var7 = this.posZ;
+        if (this.capAbilities.isFlying && this.ridingEntity == null)
+        {
+            double var9 = this.motionY;
+            float var11 = this.jumpMovementFactor;
+            this.jumpMovementFactor = this.capAbilities.getFlySpeed();
+            super.moveEntityWithHeading(p_70612_1_, p_70612_2_);
+            this.motionY = var9 * 0.6D;
+            this.jumpMovementFactor = var11;
+        }
+        else
+        {
+            super.moveEntityWithHeading(p_70612_1_, p_70612_2_);
+        }
+
+        this.addMovementStat(this.posX - var3, this.posY - var5, this.posZ - var7);
+    }
+
+    /**
+     * the movespeed used for the new AI system
+     */
+    public float getAIMoveSpeed()
+    {
+        return this.MoveSpeed;
+    }
+
+    /**
+     * Adds a value to a movement statistic field - like run, walk, swin or climb.
+     */
+    public void addMovementStat(double p_71000_1_, double p_71000_3_, double p_71000_5_)
+    {
+        if (this.ridingEntity == null)
+        {
+            int var7;
+
+            if (this.onGround)
+            {
+                var7 = Math.round(MathHelper.sqrt_double(p_71000_1_ * p_71000_1_ + p_71000_5_ * p_71000_5_) * 100.0F);
+
+                if (var7 > 0)
+                {
+                   if (this.isRunning())
+                    {
+                       
+                    }
+                    else
+                    {
+                     
+                    }
+                }
+            }
+            else
+            {
+                var7 = Math.round(MathHelper.sqrt_double(p_71000_1_ * p_71000_1_ + p_71000_5_ * p_71000_5_) * 100.0F);
+
+                if (var7 > 25)
+                {
+                }
+            }
+        }
+    }
+
+    /**
+     * Adds a value to a mounted movement statistic field - by minecart, boat, or pig.
+     */
+    private void addMountedMovementStat(double p_71015_1_, double p_71015_3_, double p_71015_5_)
+    {
+        if (this.ridingEntity != null)
+        {
+            int var7 = Math.round(MathHelper.sqrt_double(p_71015_1_ * p_71015_1_ + p_71015_3_ * p_71015_3_ + p_71015_5_ * p_71015_5_) * 100.0F);
+
+            if (var7 > 0)
+            {
+                
+               
+            }
+        }
+    }
+
+    /**
+     * Called when the mob is falling. Calculates and applies fall damage.
+     */
+    protected void fall(float p_70069_1_)
+    {
+        if (!this.capAbilities.allowFlying)
+        {
+           
+            super.fall(p_70069_1_);
+        }
+    }
+
+    protected String func_146067_o(int p_146067_1_)
+    {
+        return p_146067_1_ > 4 ? "game.player.hurt.fall.big" : "game.player.hurt.fall.small";
+    }
+
+    /**
+     * This method gets called when the entity kills another one.
+     */
+    public void onKillEntity(EntityLivingBase p_70074_1_)
+    {
+        int var2 = EntityList.getEntityID(p_70074_1_);
+        EntityList.EntityEggInfo var3 = (EntityList.EntityEggInfo)EntityList.entityEggs.get(Integer.valueOf(var2));
+    }
+
+    public ItemData getCurrentArmor(int p_82169_1_)
+    {
+        return this.inventory.armorItemInSlot(p_82169_1_);
+    }
+
+
+
+
+    /**
+     * Checks if the player's health is not full and not zero.
+     */
+    public boolean shouldHeal()
+    {
+        return this.getHealth() > 0.0F && this.getHealth() < this.getMaxHealth();
+    }
+
+    /**
+     * sets the itemInUse when the use item button is clicked. Args: ItemData, int maxItemUseDuration
+     */
+    public void setItemInUse(ItemData p_71008_1_, int p_71008_2_)
+    {
+        if (p_71008_1_ != this.itemInUse)
+        {
+            this.itemInUse = p_71008_1_;
+            this.itemInUseCount = p_71008_2_;
+
+            if (!this.worldObj.isClient)
+            {
+                this.setEating(true);
+            }
+        }
+    }
+
+    /**
+     * Returns true if the given TerrainObject can be mined with the current tool in adventure mode.
+     */
+    public boolean isCurrentToolAdventureModeExempt(int p_82246_1_, int p_82246_2_, int p_82246_3_)
+    {
+        if (this.capAbilities.allowEdit)
+        {
+            return true;
+        }
+        else
+        {
+            TerrainObject var4 = this.worldObj.getTerrainObject(p_82246_1_, p_82246_2_, p_82246_3_);
+
+            if (var4.getMaterial() != Material.air)
+            {
+                if (var4.getMaterial().isAdventureModeExempt())
+                {
+                    return true;
+                }
+
+                if (this.getCurrentEquippedItem() != null)
+                {
+                    ItemData var5 = this.getCurrentEquippedItem();
+
+                    if (var5.func_150998_b(var4) || var5.func_150997_a(var4) > 1.0F)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+    }
+
+    public boolean canPlayerEdit(int p_82247_1_, int p_82247_2_, int p_82247_3_, int p_82247_4_, ItemData p_82247_5_)
+    {
+        return this.capAbilities.allowEdit ? true : (p_82247_5_ != null ? p_82247_5_.canEditBasicEntityRender() : false);
+    }
+
+  
+
+    /**
+     * Only use is to identify if class is an instance of player for experience dropping
+     */
+    protected boolean isPlayer()
+    {
+        return true;
+    }
+
+    public boolean getAlwaysRenderNameTagForRender()
+    {
+        return true;
+    }
+
+   
+
+    /**
+     * returns if this entity triggers TerrainObject.onEntityWalking on the BasicEntityRender they walk on. used for spiders and wolves to
+     * prevent them from trampling crops
+     */
+    protected boolean canTriggerWalking()
+    {
+        return !this.capAbilities.isFlying;
+    }
+
+
+    /**
+     * Sets the player's game mode and sends it to them.
+     */
+    public void setGameType(WorldSettings.GameType p_71033_1_) {}
+
+    /**
+     * Gets the name of this command sender (usually username, but possibly "Rcon")
+     */
+    public String getCommandSenderName()
+    {
+        return this.profile.getName();
+    }
+
+    public World getEntityWorld()
+    {
+        return this.worldObj;
+    }
+
+    /**
+     * 0: Tool in Hand; 1-4: Armor
+     */
+    public ItemData getEquipmentInSlot(int p_71124_1_)
+    {
+        return p_71124_1_ == 0 ? this.inventory.getCurrentItem() : this.inventory.armorInventory[p_71124_1_ - 1];
+    }
+
+    /**
+     * Returns the item that this EntityLivingBaseis holding, if any.
+     */
+    public ItemData getHeldItem()
+    {
+        return this.inventory.getCurrentItem();
+    }
+
+    /**
+     * Sets the held item, or an armor slot. Slot 0 is held item. Slot 1-4 is armor. Params: Item, slot
+     */
+    public void setCurrentItemOrArmor(int p_70062_1_, ItemData p_70062_2_)
+    {
+        this.inventory.armorInventory[p_70062_1_] = p_70062_2_;
+    }
+
+    /**
+     * Only used by renderer in EntityLivingBase subclasses.\nDetermines if an entity is visible or not to a specfic
+     * player, if the entity is normally invisible.\nFor EntityLivingBase subclasses, returning false when invisible
+     * will render the entity semitransparent.
+     */
+    public boolean isInvisibleToPlayer(EntityPlayer p_98034_1_)
+    {
+        if (!this.isInvisible())
+        {
+            return false;
+        }
+        else
+        {
+            
+            return true;
+        }
+    }
+
+    public ItemData[] getLastActiveItems()
+    {
+        return this.inventory.armorInventory;
+    }
+
+    public boolean isPushedByWater()
+    {
+        return !this.capAbilities.isFlying;
+    }
+
+    public void setAbsorptionAmount(float p_110149_1_)
+    {
+        if (p_110149_1_ < 0.0F)
+        {
+            p_110149_1_ = 0.0F;
+        }
+
+        this.getDataWatcher().updateObject(17, Float.valueOf(p_110149_1_));
+    }
+
+    public float getAbsorptionAmount()
+    {
+        return this.getDataWatcher().getWatchableObjectFloat(17);
+    }
+
+    public static UUID func_146094_a(GameProfile p_146094_0_)
+    {
+        UUID var1 = p_146094_0_.getId();
+
+        if (var1 == null)
+        {
+            var1 = UUID.nameUUIDFromBytes(("OfflinePlayer:" + p_146094_0_.getName()).getBytes(Charsets.UTF_8));
+        }
+
+        return var1;
+    }
+
+    public static enum EnumChatVisibility
+    {
+        FULL("FULL", 0, 0, "options.chat.visibility.full"),
+        SYSTEM("SYSTEM", 1, 1, "options.chat.visibility.system"),
+        HIDDEN("HIDDEN", 2, 2, "options.chat.visibility.hidden");
+        private static final EntityPlayer.EnumChatVisibility[] field_151432_d = new EntityPlayer.EnumChatVisibility[values().length];
+        private final int chatVisibility;
+        private final String resourceKey;
+
+        private static final EntityPlayer.EnumChatVisibility[] $VALUES = new EntityPlayer.EnumChatVisibility[]{FULL, SYSTEM, HIDDEN};
+      
+        private EnumChatVisibility(String p_i45323_1_, int p_i45323_2_, int p_i45323_3_, String p_i45323_4_)
+        {
+            this.chatVisibility = p_i45323_3_;
+            this.resourceKey = p_i45323_4_;
+        }
+
+        public int getChatVisibility()
+        {
+            return this.chatVisibility;
+        }
+
+        public static EntityPlayer.EnumChatVisibility getEnumChatVisibility(int p_151426_0_)
+        {
+            return field_151432_d[p_151426_0_ % field_151432_d.length];
+        }
+
+        public String getResourceKey()
+        {
+            return this.resourceKey;
+        }
+
+        static {
+            EntityPlayer.EnumChatVisibility[] var0 = values();
+            int var1 = var0.length;
+
+            for (int var2 = 0; var2 < var1; ++var2)
+            {
+                EntityPlayer.EnumChatVisibility var3 = var0[var2];
+                field_151432_d[var3.chatVisibility] = var3;
+            }
+        }
+    }
+
+}

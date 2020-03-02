@@ -1,0 +1,501 @@
+package nl.thestructureworld.client.multiplayer;
+
+import nl.thestructureworld.account.MouseControl;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.entity.Entity;
+import nl.thestructureworld.entity.EntityClientPlayerMP;
+import nl.thestructureworld.entity.EntityPlayer;
+import nl.thestructureworld.item.ItemData;
+import nl.thestructureworld.item.ItemSword;
+import nl.thestructureworld.network.play.client.C02PacketUseEntity;
+import nl.thestructureworld.network.play.client.PacketPlayerDigging;
+import nl.thestructureworld.network.play.client.C08PacketPlayerTerrainObjectPlacement;
+import nl.thestructureworld.network.play.client.C09PacketHeldItemChange;
+import nl.thestructureworld.network.play.client.C0EPacketClickWindow;
+import nl.thestructureworld.network.play.client.C10PacketForgeInventoryAction;
+import nl.thestructureworld.terrainandobjects.TerrainObject;
+import nl.thestructureworld.terrainandobjects.Material;
+import nl.thestructureworld.util.Vec3;
+import nl.thestructureworld.world.World;
+import nl.thestructureworld.world.WorldSettings;
+
+public class PlayerControllerMP
+{
+    /** The TheStructureWorld instance. */
+    private final TheStructureWorld thestructureworld;
+    private final NetHandlerPlayClient netClientHandler;
+
+    /** PosX of the current TerrainObject being destroyed */
+    private int currentTerrainObjectX = -1;
+
+    /** PosY of the current TerrainObject being destroyed */
+    private int currentTerrainObjectY = -1;
+
+    /** PosZ of the current TerrainObject being destroyed */
+    private int currentTerrainObjectZ = -1;
+
+    /** The Item currently being used to destroy a TerrainObject */
+    private ItemData currentItemHittingTerrainObject;
+
+    /** Current TerrainObject damage (MP) */
+    private float curTerrainObjectDamageMP;
+
+    /**
+     * Tick counter, when it hits 4 it resets back to 0 and plays the step sound
+     */
+    private float stepSoundTickCounter;
+
+    /**
+     * Delays the first damage on the TerrainObject after the first click on the TerrainObject
+     */
+    private int TerrainObjectHitDelay;
+    private boolean isHittingTerrainObject;
+    private WorldSettings.GameType currentGameType;
+    private int currentPlayerItem;
+
+
+    public PlayerControllerMP(TheStructureWorld p_i45062_1_, NetHandlerPlayClient p_i45062_2_)
+    {
+        this.currentGameType = WorldSettings.GameType.SURVIVAL;
+        this.thestructureworld = p_i45062_1_;
+        this.netClientHandler = p_i45062_2_;
+    }
+
+    /**
+     * TerrainObject dig operation in forge mode (instantly digs the TerrainObject).
+     */
+    public static void clickTerrainObjectForge(TheStructureWorld p_78744_0_, PlayerControllerMP p_78744_1_, int p_78744_2_, int p_78744_3_, int p_78744_4_, int p_78744_5_)
+    {
+        if (!p_78744_0_.theWorld.extinguishFire(p_78744_0_.thePlayer, p_78744_2_, p_78744_3_, p_78744_4_, p_78744_5_))
+        {
+            p_78744_1_.onPlayerDestroyTerrainObject(p_78744_2_, p_78744_3_, p_78744_4_, p_78744_5_);
+        }
+    }
+
+    /**
+     * Sets player capAbilities depending on current gametype. params: player
+     */
+    public void setPlayercapAbilities(EntityPlayer p_78748_1_)
+    {
+        this.currentGameType.configurePlayercapAbilities(p_78748_1_.capAbilities);
+    }
+    
+    /**
+     * Sets the game type for the player.
+     */
+    public void setGameType(WorldSettings.GameType p_78746_1_)
+    {
+        this.currentGameType = p_78746_1_;
+        this.currentGameType.configurePlayercapAbilities(this.thestructureworld.thePlayer.capAbilities);
+    }
+
+    /**
+     * Flips the player around. Args: player
+     */
+    public void flipPlayer(EntityPlayer p_78745_1_)
+    {
+    	if(p_78745_1_ != null)
+    	{
+        p_78745_1_.rotationYaw = -180.0F;
+    	}
+    }
+
+    public boolean shouldDrawHUD()
+    {
+        return this.currentGameType.isSurvival();
+    }
+
+    /**
+     * Called when a player completes the destruction of a TerrainObject
+     */
+    public boolean onPlayerDestroyTerrainObject(int x, int y, int z, int i)
+    {
+        if(!this.thestructureworld.thePlayer.isCurrentToolAdventureModeExempt(x, y, z))
+        {
+            return false;
+        }
+        else if (this.currentGameType.isForgeMode() && this.thestructureworld.thePlayer.getHeldItem() != null && this.thestructureworld.thePlayer.getHeldItem().getItem() instanceof ItemSword)
+        {
+            return false;
+        }
+        else
+        {
+            WorldClient wc = this.thestructureworld.theWorld;
+            TerrainObject o = wc.getTerrainObject(x, y, z);
+
+            if (o.getMaterial() == Material.air)
+            {
+                return false;
+            }
+            else
+            {
+                boolean var8 = wc.setTerrainObjectToAir(x, y, z);
+
+                if (var8)
+                {
+                    o.onTerrainObjectDestroyedByPlayer(wc, x, y, z, o);
+                }
+
+                this.currentTerrainObjectY = -1;
+
+                if (!this.currentGameType.isForgeMode())
+                {
+                    ItemData var9 = this.thestructureworld.thePlayer.getCurrentEquippedItem();
+
+                    if (var9 != null)
+                    {
+                        var9.whenObjectisDestroyed(wc, o, x, y, z, this.thestructureworld.thePlayer);
+
+                        if (var9.stackSize == 0)
+                        {
+                            this.thestructureworld.thePlayer.destroyCurrentEquippedItem();
+                        }
+                    }
+                }
+
+                return var8;
+            }
+        }
+    }
+
+    /**
+     * Called by TheStructureWorld class when the player is hitting a TerrainObject with an item. Args: x, y, z, side
+     */
+    public void clickTerrainObject(int x, int y, int z, int h)
+    {
+        if(this.thestructureworld.thePlayer.isCurrentToolAdventureModeExempt(x, y, z))
+        {
+            if (!this.isHittingTerrainObject || !this.sameToolAndTerrainObject(x, y, z))
+            {
+                if (this.isHittingTerrainObject)
+                {
+                this.netClientHandler.addToSendQueue(new PacketPlayerDigging(1, this.currentTerrainObjectX, this.currentTerrainObjectY, this.currentTerrainObjectZ, h));
+                }
+
+                this.netClientHandler.addToSendQueue(new PacketPlayerDigging(0, x, y, z, h));
+                TerrainObject var5 = this.thestructureworld.theWorld.getTerrainObject(x, y, z);
+                boolean var6 = var5.getMaterial() != Material.air;
+
+                if (var6 && this.curTerrainObjectDamageMP == 0.0F)
+                {
+                    var5.onObjectLeftClick(this.thestructureworld.theWorld, x, y, z, this.thestructureworld.thePlayer);
+                }
+
+                if (var6 && var5.getPlayerRelativeTerrainObjectHardness(this.thestructureworld.thePlayer, this.thestructureworld.thePlayer.worldObj, x, y, z) >= 1.0F)
+                {
+                    this.onPlayerDestroyTerrainObject(x, y, z, h);
+                }
+                else
+                {
+                    this.isHittingTerrainObject = true;
+                    this.currentTerrainObjectX = x;
+                    this.currentTerrainObjectY = y;
+                    this.currentTerrainObjectZ = z;
+                    this.currentItemHittingTerrainObject = this.thestructureworld.thePlayer.getHeldItem();
+                    this.curTerrainObjectDamageMP = 0.0F;
+                    this.stepSoundTickCounter = 0.0F;
+                }
+            }
+        }
+    }
+
+    /**
+     * Resets current TerrainObject damage and isHittingTerrainObject
+     */
+    public void resetTerrainObjectRemoving()
+    {
+        if (this.isHittingTerrainObject)
+        {
+            this.netClientHandler.addToSendQueue(new PacketPlayerDigging(1, this.currentTerrainObjectX, this.currentTerrainObjectY, this.currentTerrainObjectZ, -1));
+        }
+
+        this.isHittingTerrainObject = false;
+        this.curTerrainObjectDamageMP = 0.0F;
+    }
+
+    /**
+     * Called when a player damages a TerrainObject and updates damage counters
+     */
+    public void onPlayerDamageTerrainObject(int x, int y, int z, int side)
+    {
+        this.syncCurrentPlayItem();
+
+        if (this.TerrainObjectHitDelay > 0)
+        {
+            --this.TerrainObjectHitDelay;
+        }
+        else if(this.currentGameType.isForgeMode())
+        {
+            this.TerrainObjectHitDelay = 5;
+            this.netClientHandler.addToSendQueue(new PacketPlayerDigging(0, x, y, z, side));
+            clickTerrainObjectForge(this.thestructureworld, this, x, y, z, side);
+        }
+        else
+        {
+            if (this.sameToolAndTerrainObject(x, y, z))
+            {
+                TerrainObject var5 = this.thestructureworld.theWorld.getTerrainObject(x, y, z);
+
+                if (var5.getMaterial() == Material.air)
+                {
+                    this.isHittingTerrainObject = false;
+                    return;
+                }
+
+                this.curTerrainObjectDamageMP += var5.getPlayerRelativeTerrainObjectHardness(this.thestructureworld.thePlayer, this.thestructureworld.thePlayer.worldObj, x, y, z);
+
+                if (this.stepSoundTickCounter % 4.0F == 0.0F)
+                {
+                	int var345 = 0;
+                	var345 = var345;
+                    //this.thestructureworld.getSoundHandler().playSound(new PositionedSoundRecord(new ResourceLocation(var5.stepSound.func_150498_e()), (var5.stepSound.func_150497_c() + 1.0F) / 8.0F, var5.stepSound.func_150494_d() * 0.5F, (float)p_78759_1_ + 0.5F, (float)p_78759_2_ + 0.5F, (float)p_78759_3_ + 0.5F));
+                }
+
+                ++this.stepSoundTickCounter;
+
+                if (this.curTerrainObjectDamageMP >= 1.0F)
+                {
+                    this.isHittingTerrainObject = false;
+                    this.netClientHandler.addToSendQueue(new PacketPlayerDigging(2, x, y, z, side));
+                    this.onPlayerDestroyTerrainObject(x, y, z, side);
+                    this.curTerrainObjectDamageMP = 0.0F;
+                    this.stepSoundTickCounter = 0.0F;
+                    this.TerrainObjectHitDelay = 5;
+                }
+
+             }
+            else
+            {
+                this.clickTerrainObject(x, y, z, side);
+            }
+        }
+    }
+
+    /**
+     * player reach distance = 4F
+     */
+    public float getTerrainObjectReachDistance()
+    {
+        return this.currentGameType.isForgeMode() ? 5.0F : 4.5F;
+    }
+
+    public void updateController()
+    {
+        this.syncCurrentPlayItem();
+
+        if (this.netClientHandler.getNetworkManager().isChannelOpen())
+        {
+            this.netClientHandler.getNetworkManager().processReceivedPackets();
+        }
+        else if (this.netClientHandler.getNetworkManager().getExitMessage() != null)
+        {
+            this.netClientHandler.getNetworkManager().getNetHandler().onDisconnect(this.netClientHandler.getNetworkManager().getExitMessage());
+        }
+        else
+        {
+            this.netClientHandler.getNetworkManager().getNetHandler().onDisconnect("Disconnected from server");
+        }
+    }
+
+    private boolean sameToolAndTerrainObject(int p_85182_1_, int p_85182_2_, int p_85182_3_)
+    {
+        ItemData var4 = this.thestructureworld.thePlayer.getHeldItem();
+        boolean var5 = this.currentItemHittingTerrainObject == null && var4 == null;
+
+        if (this.currentItemHittingTerrainObject != null && var4 != null)
+        {
+            var5 = var4.getItem() == this.currentItemHittingTerrainObject.getItem() && ItemData.areItemDataTagsEqual(var4, this.currentItemHittingTerrainObject) && (var4.isItemDataDamageable() || var4.getItemDamage() == this.currentItemHittingTerrainObject.getItemDamage());
+        }
+
+        return p_85182_1_ == this.currentTerrainObjectX && p_85182_2_ == this.currentTerrainObjectY && p_85182_3_ == this.currentTerrainObjectZ && var5;
+    }
+
+    /**
+     * Syncs the current player item with the server
+     */
+    private void syncCurrentPlayItem()
+    {
+        int var1 = this.thestructureworld.thePlayer.inventory.currentItem;
+
+        if (var1 != this.currentPlayerItem)
+        {
+            this.currentPlayerItem = var1;
+            this.netClientHandler.addToSendQueue(new C09PacketHeldItemChange(this.currentPlayerItem));
+        }
+    }
+
+    /**
+     * Handles a players right click. Args: player, world, x, y, z, side, hitVec
+     */
+    public boolean onPlayerRightClick(EntityPlayer player, World world, ItemData stack, int x, int y, int z, int side, Vec3 hit)
+    {
+        this.syncCurrentPlayItem();
+        float var9 = (float)hit.xCoord - (float)x;
+        float var10 = (float)hit.yCoord - (float)y;
+        float var11 = (float)hit.zCoord - (float)z;
+        boolean var12 = false;
+        
+        if ((!player.isCrouching() || player.getHeldItem() == null) && world.getTerrainObject(x, y, z).onObjectRightClick(world, x, y, z, player, side, var9, var10, var11))
+        {
+            var12 = true;
+        }
+       
+        
+        this.netClientHandler.addToSendQueue(new C08PacketPlayerTerrainObjectPlacement(x, y, z, side, player.inventory.getCurrentItem(), var9, var10, var11));
+
+        if (var12)
+        {
+            return true;
+        }
+        else if (stack == null)
+        {
+            return false;
+        }
+        
+       
+        
+        if (this.currentGameType.isForgeMode())
+        {
+            int var16 = stack.getItemDamage();
+            int var14 = stack.stackSize;
+            boolean var15 = stack.tryPlaceItemIntoWorld(player, world, x, y, z, side, var9, var10, var11);
+            stack.setItemDamage(var16);
+            stack.stackSize = var14;
+            return var15;
+        }
+        else
+        {
+            return stack.tryPlaceItemIntoWorld(player, world, x, y, z, side, var9, var10, var11);
+        }
+    }
+
+    /**
+     * Notifies the server of things like consuming food, etc...
+     */
+    public boolean sendUseItem(EntityPlayer p_78769_1_, World p_78769_2_, ItemData p_78769_3_)
+    {
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new C08PacketPlayerTerrainObjectPlacement(-1, -1, -1, 255, p_78769_1_.inventory.getCurrentItem(), 0.0F, 0.0F, 0.0F));
+        int var4 = p_78769_3_.stackSize;
+        ItemData var5 = p_78769_3_.useItemRightClick(p_78769_2_, p_78769_1_);
+
+        if (var5 == p_78769_3_ && (var5 == null || var5.stackSize == var4))
+        {
+            return false;
+        }
+        else
+        {
+            p_78769_1_.inventory.mainInventory[p_78769_1_.inventory.currentItem] = var5;
+
+            if (var5.stackSize == 0)
+            {
+                p_78769_1_.inventory.mainInventory[p_78769_1_.inventory.currentItem] = null;
+            }
+
+            return true;
+        }
+    }
+
+    public EntityClientPlayerMP createNewPlayerMP(World p_147493_1_)
+    {
+        return new EntityClientPlayerMP(this.thestructureworld, p_147493_1_, this.thestructureworld.getSession(), this.netClientHandler);
+    }
+
+    /**
+     * Attacks an entity
+     */
+    public void attackEntity(EntityPlayer p_78764_1_, Entity p_78764_2_)
+    {
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new C02PacketUseEntity(p_78764_2_, C02PacketUseEntity.Action.ATTACK));
+        p_78764_1_.attackTargetEntityWithCurrentItem(p_78764_2_);
+    }
+
+    /**
+     * Send packet to server - player is interacting with another entity (left click)
+     */
+    public boolean interactWithEntitySendPacket(EntityPlayer p_78768_1_, Entity p_78768_2_)
+    {
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new C02PacketUseEntity(p_78768_2_, C02PacketUseEntity.Action.INTERACT));
+        return p_78768_1_.interactWith(p_78768_2_);
+    }
+
+    public ItemData windowClick(int p_78753_1_, int p_78753_2_, int p_78753_3_, int p_78753_4_, EntityPlayer p_78753_5_)
+    {
+        short var6 = p_78753_5_.openContainer.getNextTransactionID(p_78753_5_.inventory);
+        ItemData var7 = p_78753_5_.openContainer.slotClick(p_78753_2_, p_78753_3_, p_78753_4_, p_78753_5_);
+        this.netClientHandler.addToSendQueue(new C0EPacketClickWindow(p_78753_1_, p_78753_2_, p_78753_3_, p_78753_4_, var7, var6));
+        return var7;
+    }
+
+    /**
+     * Used in PlayerControllerMP to update the server with an ItemData in a slot.
+     */
+    public void sendSlotPacket(ItemData p_78761_1_, int p_78761_2_)
+    {
+        if (this.currentGameType.isForgeMode())
+        {
+            this.netClientHandler.addToSendQueue(new C10PacketForgeInventoryAction(p_78761_2_, p_78761_1_));
+        }
+    }
+
+    /**
+     * Sends a Packet107 to the server to drop the item on the ground
+     */
+    public void sendPacketDropItem(ItemData p_78752_1_)
+    {
+        if (this.currentGameType.isForgeMode() && p_78752_1_ != null)
+        {
+            this.netClientHandler.addToSendQueue(new C10PacketForgeInventoryAction(-1, p_78752_1_));
+        }
+    }
+
+    public void onStoppedUsingItem(EntityPlayer p_78766_1_)
+    {
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new PacketPlayerDigging(5, 0, 0, 0, 255));
+        p_78766_1_.stopUsingItem();
+    }
+
+    public boolean gameIsSurvival()
+    {
+        return this.currentGameType.isSurvival();
+    }
+
+    /**
+     * Checks if the player is not Forge, used for checking if it should break a TerrainObject instantly
+     */
+    public boolean isForgeMode()
+    {
+    	return this.currentGameType.isForgeMode();
+    }
+    
+    public boolean isHoldingObject()
+    {
+    	if(MouseControl.getObject == -1)
+    	{
+    	return false;
+    	}
+    	else return true;
+    }
+
+    /**
+     * returns true if player is in Forge mode
+     */
+    public boolean isInForgeMode()
+    {
+        return this.currentGameType.isForgeMode();
+    }
+
+    /**
+     * true for hitting entities far away.
+     */
+    public boolean extendedReach()
+    {
+        return this.currentGameType.isForgeMode();
+    }
+
+
+}

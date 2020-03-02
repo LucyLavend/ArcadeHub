@@ -1,0 +1,179 @@
+package nl.miystengine.client.multiplayer;
+
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import nl.miystengine.client.MiystEngine;
+import nl.miystengine.entity.Entity;
+import nl.miystengine.world.World;
+import nl.miystengine.world.WorldProvider;
+import nl.miystengine.world.SettingsOfStructureWorld;
+
+public class WorldClient extends World
+{
+    /** The packets that need to be sent to the server. */
+    private NetHandlerPlayClient sendQueue;
+    
+    /** Contains all entities for this client, both spawned and non-spawned. */
+    private Set entityList = new HashSet();
+
+    /**
+     * Contains all entities for this client that were not spawned due to a non-present Area. The game will attempt to
+     * spawn up to 10 pending entities with each subsequent tick until the spawn queue is empty.
+     */
+    private Set entitySpawnQueue = new HashSet();
+    private final MiystEngine miystengine = MiystEngine.getMiystEngine();
+    private final Set previousActiveAreaSet = new HashSet();
+
+    public WorldClient(NetHandlerPlayClient gen_functioni_i45063_1_, nl.miystengine.world.StructureWorldInfo gen_functioni_i45063_2_,  String gen_functioni_i45063_4_)
+    {
+        super("MpServer", new WorldProvider(), gen_functioni_i45063_2_);
+        this.sendQueue = gen_functioni_i45063_1_;
+        this.difficultySetting = gen_functioni_i45063_4_;
+        this.setSpawnLocation(8, 64, 8);
+    }
+
+    /**
+     * Runs a single tick for the world
+     */
+    public void tick()
+    {
+        super.tick();
+        for (int var1 = 0; var1 < 10 && !this.entitySpawnQueue.isEmpty(); ++var1)
+        {
+            Entity var2 = (Entity)this.entitySpawnQueue.iterator().next();
+            this.entitySpawnQueue.remove(var2);
+
+            if (!this.loadedEntityList.contains(var2))
+            {
+                this.spawnEntityInWorld(var2);
+            }
+        }
+        this.sendQueue.onNetworkTick();
+   }
+
+    /**
+     * Invalidates an AABB region of BasicEntityRender from the receive queue, in the event that the TerrainObject has been modified
+     * client-side in the intervening 80 receive ticks.
+     */
+    public void invalidateTerrainObjectReceiveRegion(int gen_functioni_73031_1_, int gen_functioni_73031_2_, int gen_functioni_73031_3_, int gen_functioni_73031_4_, int gen_functioni_73031_5_, int gen_functioni_73031_6_) {}
+
+
+    /**
+     * Called to place all entities as part of a world
+     */
+    public boolean spawnEntityInWorld(Entity gen_functioni_72838_1_)
+    {
+        boolean var2 = super.spawnEntityInWorld(gen_functioni_72838_1_);
+        this.entityList.add(gen_functioni_72838_1_);
+
+        if (!var2)
+        {
+            this.entitySpawnQueue.add(gen_functioni_72838_1_);
+        }
+        return var2;
+    }
+
+    /**
+     * Schedule the entity for removal during the next tick. Marks the entity dead in anticipation.
+     */
+    public void removeEntity(Entity gen_functioni_72900_1_)
+    {
+        super.removeEntity(gen_functioni_72900_1_);
+        this.entityList.remove(gen_functioni_72900_1_);
+    }
+
+    protected void onEntityAdded(Entity gen_functioni_72923_1_)
+    {
+     
+    }
+
+    protected void onEntityRemoved(Entity gen_functioni_72847_1_)
+    {
+        boolean var2 = false;
+
+        if (this.entityList.contains(gen_functioni_72847_1_))
+        {
+            if (gen_functioni_72847_1_.isEntityAlive())
+            {
+                this.entitySpawnQueue.add(gen_functioni_72847_1_);
+                var2 = true;
+            }
+            else
+            {
+                this.entityList.remove(gen_functioni_72847_1_);
+            }
+        }
+    }
+
+    /**
+     * Add an ID to Entity mapping to entityHashSet
+     */
+    public void spawnEntityToWorld(int gen_functioni_73027_1_, Entity gen_functioni_73027_2_)
+    {
+        this.entityList.add(gen_functioni_73027_2_);
+        gen_functioni_73027_2_.setEntityId(gen_functioni_73027_1_);
+
+        if (!this.spawnEntityInWorld(gen_functioni_73027_2_))
+        {
+            this.entitySpawnQueue.add(gen_functioni_73027_2_);
+        }
+   }
+
+
+    /**
+     * If on MP, sends a quitting packet.
+     */
+    public void sendQuittingDisconnectingPacket()
+    {
+        this.sendQueue.getNetworkManager().closeChannel("Quitting");
+    }
+
+    /**
+     * Updates all weather states.
+     */
+    protected void updateWeather()
+    {
+        
+    }
+
+    public void removeAllEntities()
+    {
+        this.loadedEntityList.removeAll(this.unloadedEntityList);
+        int var1;
+        Entity var2;
+        int var3;
+        int var4;
+
+        for (var1 = 0; var1 < this.unloadedEntityList.size(); ++var1)
+        {
+            var2 = (Entity)this.unloadedEntityList.get(var1);
+            var3 = var2.AreaCoordX;
+            var4 = var2.AreaCoordZ;
+
+        }
+
+        for (var1 = 0; var1 < this.unloadedEntityList.size(); ++var1)
+        {
+            this.onEntityRemoved((Entity)this.unloadedEntityList.get(var1));
+        }
+
+        this.unloadedEntityList.clear();
+
+        for (var1 = 0; var1 < this.loadedEntityList.size(); ++var1)
+        {
+            var2 = (Entity)this.loadedEntityList.get(var1);
+
+
+            if (var2.isDead)
+            {
+                var3 = var2.AreaCoordX;
+                var4 = var2.AreaCoordZ;
+
+                this.loadedEntityList.remove(var1--);
+                this.onEntityRemoved(var2);
+            }
+        }
+    }
+}

@@ -1,0 +1,43 @@
+package nl.miystengine.client.shaders;
+
+import nl.miystengine.client.renderer.EntityRenderer;
+
+
+public class ArrayListShadersLoaded
+{
+	public String shaderName;
+	public String shaderNameLocationVertex;
+	public String shaderNameLocationFragment;
+	
+	public int shaderNameVertexID;
+	public int shaderNameFragmentID;
+	public int programID;
+
+
+	public ArrayListShadersLoaded(String shaderName,int programID,String vertexN,String fragmentN,int vertexID,int fragmentID)
+	{
+		this.shaderName = shaderName;
+		this.programID = programID;
+		this.shaderNameLocationVertex = vertexN;
+		this.shaderNameLocationFragment = fragmentN;
+		this.shaderNameVertexID = vertexID;
+		this.shaderNameFragmentID = fragmentID;	
+	}
+	
+	private int shaderID;
+	
+	public void notUsed()
+	{
+		for(int i =0;i < ShaderProgram.shadersList.size();++i)
+ 		{
+ 			if(ShaderProgram.shadersList.get(i).shaderNameLocationFragment.contains(EntityRenderer.ShaderT.FRAGMENT_FILEN))
+ 			{
+ 				shaderID = i;
+ 				continue;
+ 			}
+ 		}
+ 		int proID = ShaderProgram.shadersList.get(shaderID).programID;
+	}
+	
+	
+}

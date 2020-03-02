@@ -1,0 +1,120 @@
+package nl.thestructureworld.client.gui;
+
+import java.awt.event.KeyEvent;
+import java.io.File;
+import java.net.URI;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Random;
+
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.audio.PositionedSoundRecord;
+import nl.thestructureworld.client.audio.SoundCategory;
+import nl.thestructureworld.client.audio.SoundHandler;
+import nl.thestructureworld.client.multiplayer.ServerData;
+import nl.thestructureworld.client.renderer.OpenGlHelper;
+import nl.thestructureworld.client.renderer.Tessellator;
+import nl.thestructureworld.client.renderer.texture.DynamicTexture;
+import nl.thestructureworld.entity.player.EntityPlayer;
+import nl.thestructureworld.server.TheStructureWorldServer;
+import nl.thestructureworld.util.EnumChatFormatting;
+import nl.thestructureworld.util.ResourceLocation;
+import nl.thestructureworld.world.storage.ISaveFormat;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GLContext;
+import org.lwjgl.util.glu.Project;
+
+public class ShaderEditorGui extends GuiScreen
+{
+    private static final Random rand = new Random();
+    public FontRenderer font;
+    
+    public ShaderEditorGui()
+    {
+    	backGroundTexture = "/menu/wooden hut background.png";
+    }
+
+    public File shaderLoc;
+    
+    private void renderShaderEditor(int x, int y)
+    {
+    	
+    	   
+        int Y = this.height / 4 + 48;
+        int X = this.width / 2 - 100;
+        this.buttonList.add(new ButtonBasic(1, X, Y, "Create New Shader"));
+
+        
+     
+        
+    	GL11.glColor4f(1F, 1F, 1F, 1F);
+        Tessellator var4 = Tessellator.instance;
+        GL11.glPushMatrix();
+        TheStructureWorld.TheStructureWorld.getTextureManager().bindTexture("/gui/Shader-Editor.png",0,true); 
+        GL11.glTranslatef(225F, 125F, 0);
+        var4.startDrawingQuads();
+        var4.addVertexWithUV(0.0D, y/1.8D, 0.0D, 0.0D, 1D);
+        var4.addVertexWithUV(x/3D, y/1.8D, 0.0D, 1.0D, 1D);
+        var4.addVertexWithUV(x/3D, 0.0D, 0.0D, 1.0D, 0.0D);
+        var4.addVertexWithUV(0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
+        var4.draw();
+       
+        this.drawString(font,"text", 2, 96, 14737632);
+        GL11.glPopMatrix();
+    }
+    
+    /**
+     * Returns true if this GUI should pause the game when it is displayed in single-player
+     */
+    public boolean doesGuiPauseGame()
+    {
+        return false;
+    }
+
+    @Override
+    /**
+     * Fired when a key is typed. This is the equivalent of KeyListener.keyTyped(KeyEvent e).
+     */
+    protected void keyTyped(char c, int i) 
+    {
+    	super.keyTyped(c,i);
+    }
+
+    
+    protected void actionPerformed(ButtonBasic button)
+    {
+        if (button.id == 1)
+        {
+            this.thestructureworld.displayGuiScreen(new SelectWorldGui(this));
+        }
+        if (button.id == 2)
+        {
+        	 this.thestructureworld.displayGuiScreen(new GuiMultiplayer(this)); 
+        }
+        if (button.id == 4)
+        {
+            this.thestructureworld.shutdown();
+        }
+    }
+
+  
+    /**
+     * Draws the screen and all the components in it.
+     */
+    public void drawScreen(int x, int y, float f)
+    {
+        super.drawScreen(x, y, f);
+        if(this.thestructureworld.fontRenderer!=null&&this.font==null){this.font=this.thestructureworld.fontRenderer;}
+        ScaledResolution sr = new ScaledResolution(this.thestructureworld, this.thestructureworld.displayWidth, this.thestructureworld.displayHeight);
+
+        int w = sr.getScaledWidth();
+        int h = sr.getScaledHeight();
+        this.renderShaderEditor(w-100,h-50);
+    }
+   
+}

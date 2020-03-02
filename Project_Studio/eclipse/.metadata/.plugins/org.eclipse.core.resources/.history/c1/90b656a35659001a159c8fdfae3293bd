@@ -1,0 +1,165 @@
+package nl.miystengine.server.management;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.util.Random;
+import java.util.concurrent.Callable;
+import nl.miystengine.client.MiystEngine;
+
+import nl.miystengine.world.SettingsOfStructureWorld.GameType;
+import nl.miystengine.world.StructureWorldInfo;
+import nl.miystengine.world.WorldServer;
+import nl.miystengine.world.SettingsOfStructureWorld;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class IntegratedServer extends MiystEngineServer
+{
+    public static StructureWorldInfo worldInfo;
+    private boolean isGamePaused;
+    private boolean isPublic;
+   
+    public IntegratedServer(MiystEngine t, String w, String wn)
+    {
+        super(new File(t.location, "saves"), t.getProxy());
+        this.setServerOwner(t.getSession().getUsername());
+        this.setFolderName(w);
+        this.setWorldName(wn);
+        this.setBuildLimit(256);
+        this.tsw_gen_functioni_152361_a(new IntegratedPlayerList(this));
+    }
+
+    /**
+     * Initialises the server and starts it.
+     */
+    protected boolean startServer() throws IOException
+    {
+        this.setOnlineMode(true);
+        this.setCanSpawnAnimals(true);
+        this.setAllowPvp(true);
+        this.setAllowFlight(true);
+        return true;
+    }
+
+    /**
+     * Main tsw_gen_functionition called by run() every loop.
+     */
+    public void tick()
+    {
+        boolean var1 = this.isGamePaused;
+        this.isGamePaused = MiystEngine.getMiystEngine().getNetHandler() != null && MiystEngine.getMiystEngine().isGamePaused;
+
+        if (!this.isGamePaused)
+        {
+            super.tick();
+            this.getConfigurationManager().tsw_gen_functioni_152611_a(12);
+        }
+    }
+
+    public String canStructuresSpawn()
+    {
+        return "sky";
+    }
+
+    public SettingsOfStructureWorld.GameType getGameType()
+    {
+        return this.worldInfo.getGameType();
+    }
+
+    public String getdifficulty()
+    {
+        return this.worldInfo.getDifficulty();
+    }
+
+
+    public boolean tsw_gen_functioni_152363_m()
+    {
+        return false;
+    }
+
+    protected File getDataDirectory()
+    {
+        return MiystEngine.miystengine.location;
+    }
+
+    public boolean isDedicatedServer()
+    {
+        return false;
+    }
+
+    /**
+     * Called on exit from the main run() loop.
+     */
+    protected void finalTick()
+    {
+    	System.out.println("Game will now exit: Integrated Server message!");
+    }
+
+    public static int getPort() throws IOException
+    {
+        ServerSocket var0 = null;
+        boolean var1 = true;
+        int var10;
+        try
+        {
+            var0 = new ServerSocket(0);
+            var10 = var0.getLocalPort();
+        }
+        finally
+        {
+            try
+            {
+                if (var0 != null)
+                {
+                    var0.close();
+                }
+            }
+            catch (IOException var8)
+            {
+                ;
+            }
+        }
+
+        return var10;
+    }
+
+    /**
+     * Saves all necessary data as preparation for stopping the server.
+     */
+    public void stopServer(boolean noSave)
+    {
+        super.stopServer(noSave);
+    }
+
+    /**
+     * Sets the serverRunning variable to false, in order to get the server to shut down.
+     */
+    public void initiateShutdown()
+    {
+        super.initiateShutdown();
+    }
+
+    /**
+     * Returns true if this integrated server is open to LAN
+     */
+    public boolean getPublic()
+    {
+        return this.isPublic;
+    }
+
+    /**
+     * Sets the game type for all worlds.
+     */
+    public void setGameType(SettingsOfStructureWorld.GameType gen_functioni_71235_1_)
+    {
+        this.getConfigurationManager().tsw_gen_functioni_152604_a(gen_functioni_71235_1_);
+    }
+    
+	@Override
+	public String difficulty() 
+	{
+		return "Normal";
+	}
+}

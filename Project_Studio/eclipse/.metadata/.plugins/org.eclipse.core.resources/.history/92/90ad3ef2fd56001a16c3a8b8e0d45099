@@ -1,0 +1,18 @@
+package nl.miystengine.client.renderer.texture;
+
+public class ArrayListGif
+{
+	public int textureID;
+	public String extraNameData = "";
+
+	public ArrayListGif(int textureID)
+	{
+		this.textureID = textureID;
+	}
+	
+	public ArrayListGif(int textureID,String extraNameData)
+	{
+		this.textureID = textureID;
+		this.extraNameData = extraNameData;
+	}
+}

@@ -1,0 +1,945 @@
+package nl.thestructureworld.server;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.base64.Base64;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.net.Proxy;
+import java.security.KeyPair;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+
+import javax.imageio.ImageIO;
+
+import nl.thestructureworld.client.ExceptionA;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.gui.IUpdatePlayerListBoxServer;
+import nl.thestructureworld.client.gui.MainMenuGui;
+import nl.thestructureworld.entity.EntityPlayer;
+import nl.thestructureworld.entity.EntityPlayerMP;
+import nl.thestructureworld.entity.EntitySpider;
+import nl.thestructureworld.network.NetworkSystem;
+import nl.thestructureworld.network.ServerStatusResponse;
+import nl.thestructureworld.network.play.server.S03PacketTimeUpdate;
+import nl.thestructureworld.server.management.PlayerProfileCache;
+import nl.thestructureworld.server.management.ServerConfigurationManager;
+import nl.thestructureworld.util.AreaCoordinates;
+import nl.thestructureworld.util.IProgressUpdate;
+import nl.thestructureworld.util.MathHelper;
+import nl.thestructureworld.util.ReportedException;
+import nl.thestructureworld.world.World;
+import nl.thestructureworld.world.WorldManager;
+import nl.thestructureworld.world.WorldServer;
+import nl.thestructureworld.world.WorldServerMulti;
+import nl.thestructureworld.world.WorldSettings;
+import nl.thestructureworld.world.area.AnvilSaveConverter;
+import nl.thestructureworld.world.storage.ISaveFormat;
+import nl.thestructureworld.world.storage.ISaveHandler;
+import nl.thestructureworld.world.storage.StructureWorldInfo;
+
+import org.apache.commons.lang3.Validate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.common.base.Charsets;
+
+import nl.thestructureworld.account.GameProfile;
+
+public abstract class TheStructureWorldServer implements Runnable
+{
+    public static final File field_152367_a = new File("usercache.json");
+    private static TheStructureWorldServer Server;
+    private final ISaveFormat anvilConverterForAnvilFile;
+    private final File anvilFile;
+    private final List tickables = new ArrayList();
+    private final NetworkSystem field_147144_o;
+    private final ServerStatusResponse field_147147_p = new ServerStatusResponse();
+    private final Random field_147146_q = new Random();
+    private static final Logger logger = LogManager.getLogger();
+    private int serverPort = -1;
+    public WorldServer[] worldServers;
+    public ServerConfigurationManager serverConfigManager;
+    private boolean serverRunning = true;
+    private boolean serverStopped;
+    private int tickCounter;
+    protected final Proxy serverProxy;
+
+    /**
+     * The task the server is currently working on(and will output on outputPercentRemaining).
+     */
+    public String currentTask;
+
+    /** The percentage of the current task finished so far. */
+    public int percentDone;
+
+    /** True if the server is in online mode. */
+    private boolean onlineMode = false;
+
+    /** True if the server has animals turned on. */
+    private boolean canSpawnAnimals;
+
+    /** Indicates whether PvP is active on the server or not. */
+    private boolean pvpEnabled;
+
+    /** Determines if flight is allowed or not. */
+    private boolean allowFlight;
+
+    /** The server MOTD string. */
+    private String motd;
+
+    /** Maximum build height. */
+    private int buildLimit;
+    private int field_143008_E = 0;
+    public final long[] tickTimeArray = new long[100];
+
+    /** Stats are [dimension][tick%100] system.nanoTime is stored. */
+    public long[][] timeOfLastDimensionTick;
+    private KeyPair serverKeyPair;
+
+    /** Username of the server owner (for integrated servers) */
+    private String serverOwner;
+    private String folderName;
+    private String worldName;
+    private int enableBadSpots;
+    /**
+     * If true, there is no need to save Areas or stop the server, because that is already being done.
+     */
+    public boolean worldIsBeingDeleted;
+    private String field_147141_M = "";
+    private boolean serverIsRunning;
+
+    /**
+     * Set when warned for "Can't keep up", which triggers again after 15 seconds.
+     */
+    private long timeOfLastWarning;
+    private String userMessage;
+    private boolean startProfiling;
+    private boolean isGamemodeForced;
+    private long field_147142_T = 0L;
+    private final PlayerProfileCache field_152366_X;
+
+    public TheStructureWorldServer(File p_i46400_1_, Proxy p_i46400_2_)
+    {
+        this.field_152366_X = new PlayerProfileCache(this, field_152367_a);
+        Server = this;
+        this.serverProxy = p_i46400_2_;
+        this.anvilFile = p_i46400_1_;
+        this.field_147144_o = new NetworkSystem(this);
+        this.anvilConverterForAnvilFile = new AnvilSaveConverter(p_i46400_1_);
+     }
+
+    /**
+     * Initialises the server and starts it.
+     */
+    protected abstract boolean startServer() throws IOException;
+
+    protected void convertMapIfNeeded(String p_71237_1_)
+    {
+        if (this.getActiveAnvilConverter().isOldMapFormat(p_71237_1_))
+        {
+            this.getActiveAnvilConverter().convertMapFormat(p_71237_1_, new IProgressUpdate()
+            {
+                private long field_96245_b = System.currentTimeMillis();
+                public void displayProgressMessage(String p_73720_1_) {}
+                public void resetProgressAndMessage(String p_73721_1_) {}
+                public void setLoadingProgress(int p_73718_1_)
+                {
+                    if (System.currentTimeMillis() - this.field_96245_b >= 1000L)
+                    {
+                        this.field_96245_b = System.currentTimeMillis();
+                        TheStructureWorldServer.logger.info("Converting... " + p_73718_1_ + "%");
+                    }
+                }
+                public void func_146586_a() {}
+                public void resetProgresAndWorkingMessage(String p_73719_1_) {}
+            });
+        }
+    }
+
+    /**
+     * Typically "menu.convertingLevel", "menu.loadingLevel" or others.
+     */
+    protected synchronized void setUserMessage(String p_71192_1_)
+    {
+        this.userMessage = p_71192_1_;
+    }
+
+    public synchronized String getUserMessage()
+    {
+        return this.userMessage;
+    }
+
+   
+    protected void initialWorldAreaLoad()
+    {
+        boolean var1 = true;
+        boolean var2 = true;
+        boolean var3 = true;
+        boolean var4 = true;
+        int var5 = 0;
+        this.setUserMessage("Generating Terrain");
+        WorldServer var7 = this.worldServers[0];
+        AreaCoordinates var8 = var7.getSpawnPoint();
+        long var9 = getSystemTimeMillis();
+
+        for (int var11 = -192; var11 <= 192 && this.isServerRunning(); var11 += 16)
+        {
+            for (int var12 = -192; var12 <= 192 && this.isServerRunning(); var12 += 16)
+            {
+                long var13 = getSystemTimeMillis();
+
+                if (var13 - var9 > 1000L)
+                {
+                    var9 = var13;
+                }
+                ++var5;
+                var7.theAreaProviderServer.loadArea(var8.posX + var11 >> 4, var8.posZ + var12 >> 4);
+            }
+        }
+
+        this.clearCurrentTask();
+    }
+
+    public abstract String canStructuresSpawn();
+
+    public abstract WorldSettings.GameType getGameType();
+
+    public abstract String difficulty();
+
+    public abstract int func_110455_j();
+
+    public abstract boolean func_152363_m();
+
+    /**
+     * Used to display a percent remaining given text and the percentage.
+     */
+    protected void outputPercentRemaining(String p_71216_1_, int p_71216_2_)
+    {
+        this.currentTask = p_71216_1_;
+        this.percentDone = p_71216_2_;
+        logger.info(p_71216_1_ + ": " + p_71216_2_ + "%");
+    }
+
+    /**
+     * Set current task to null and set its percentage to 0.
+     */
+    protected void clearCurrentTask()
+    {
+        this.currentTask = null;
+        this.percentDone = 0;
+    }
+    
+  
+    /**
+     * par1 indicates if a log message should be output.
+     */
+    protected void saveAllWorlds(boolean par1)
+    {
+        if (!this.worldIsBeingDeleted)
+        {
+            WorldServer[] var2 = this.worldServers;
+            int var3 = var2.length;
+            for (int var4 = 0; var4 < var3; ++var4)
+            {
+                WorldServer var5 = var2[var4];
+                if (var5 != null && var5.getStructureWorldInfo() != null && var5.getStructureWorldInfo().getWorldName() != null && !var5.getStructureWorldInfo().getWorldName().contains("null"))
+                {
+                    if (!par1)
+                    {
+                        logger.info("Saving Areas for level \'" + var5.getStructureWorldInfo().getWorldName() + "\'/");
+                    }
+                    try
+                    {
+                        var5.saveAllAreas(true, (IProgressUpdate)null);
+                    }
+                    catch (ExceptionA var7)
+                    {
+                        logger.warn(var7.getMessage());
+                    }
+                }
+            }
+        }
+    }
+    
+    public boolean returnToMenu = false;
+
+    /**
+     * Saves all necessary data as preparation for stopping the server.
+     */
+    public void stopServer(boolean noSave)
+    {
+        if(!noSave && !this.worldIsBeingDeleted)
+        {
+            logger.info("Stopping server");
+            if (this.func_147137_ag() != null)
+            {
+                this.func_147137_ag().terminateEndpoints();
+            }
+            if (this.serverConfigManager != null)
+            {
+                logger.info("Saving players");
+                this.serverConfigManager.saveAllPlayerData();
+                this.serverConfigManager.removeAllPlayers();
+                this.serverConfigManager.sendPlayerInfoToAllPlayers();
+            }
+            if (this.worldServers != null)
+            {
+                logger.info("Saving worlds");
+                this.saveAllWorlds(true);
+                for (int var1 = 0; var1 < this.worldServers.length; ++var1)
+                {
+                    WorldServer var2 = this.worldServers[var1];
+                    var2.flush();
+                }
+            }
+            this.returnToMenu = true;
+        }
+    }
+
+    public boolean isServerRunning()
+    {
+        return this.serverRunning;
+    }
+
+    /**
+     * Sets the serverRunning variable to false, in order to get the server to shut down.
+     */
+    public void initiateShutdown()
+    {
+        this.serverRunning = false;
+    }
+
+    public void run()
+    {
+        try
+        {
+            if (this.startServer())
+            {
+                long var1 = getSystemTimeMillis();
+                long var50 = 0L;
+                this.field_147147_p.func_151315_a(this.motd);
+                this.field_147147_p.func_151321_a(new ServerStatusResponse.ProtocolVersionIdentifier("4", 5));
+                this.func_147138_a(this.field_147147_p);
+
+                while (this.serverRunning)
+                {
+                    long var5 = getSystemTimeMillis();
+                    long var7 = var5 - var1;
+
+                    if (var7 > 2000L && var1 - this.timeOfLastWarning >= 15000L)
+                    {
+                        logger.warn("Server is overloaded! Running {}ms behind, skipping {} tick(s)", new Object[] {Long.valueOf(var7), Long.valueOf(var7 / 50L)});
+                        var7 = 2000L;
+                        this.timeOfLastWarning = var1;
+                    }
+
+                    if (var7 < 0L)
+                    {
+                        logger.warn("Did the system time change?");
+                        var7 = 0L;
+                    }
+
+                    var50 += var7;
+                    var1 = var5;
+
+                    
+                        while (var50 > 50L)
+                        {
+                            var50 -= 50L;
+                            this.tick();
+                        }
+                    
+
+                    Thread.sleep(Math.max(1L, 50L - var50));
+                    this.serverIsRunning = true;
+                }
+            }
+            else
+            {
+            	
+            }
+        }
+        catch (Throwable var48)
+        {
+            logger.error("Encountered an unexpected exception", var48);
+            System.out.println("[Server thread/ERROR]: "+var48.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                this.stopServer(false);
+                this.serverStopped = true;
+            }
+            catch (Throwable var46)
+            {
+                logger.error("Exception stopping the server", var46);
+            }
+            finally
+            {
+                this.systemExitNow();
+            }
+        }
+    }
+
+    private void func_147138_a(ServerStatusResponse p_147138_1_)
+    {
+        File var2 = this.getFile("server-icon.png");
+
+        if (var2.isFile())
+        {
+            ByteBuf var3 = Unpooled.buffer();
+
+            try
+            {
+                BufferedImage var4 = ImageIO.read(var2);
+                Validate.validState(var4.getWidth() == 64, "Must be 64 pixels wide");
+                Validate.validState(var4.getHeight() == 64, "Must be 64 pixels high");
+                ImageIO.write(var4, "PNG", new ByteBufOutputStream(var3));
+                ByteBuf var5 = Base64.encode(var3);
+                p_147138_1_.func_151320_a("data:image/png;base64," + var5.toString(Charsets.UTF_8));
+            }
+            catch (Exception var9)
+            {
+                logger.error("Couldn\'t load server icon", var9);
+            }
+            finally
+            {
+                var3.release();
+            }
+        }
+    }
+
+    protected File getDataDirectory()
+    {
+        return new File(".");
+    }
+
+    /**
+     * Called on exit from the main run() loop.
+     */
+    protected void finalTick() {}
+
+    /**
+     * Directly calls System.exit(0), instantly killing the program.
+     */
+    protected void systemExitNow() {}
+
+    /**
+     * Main function called by run() every loop.
+     */
+    public void tick()
+    {
+        long var1 = System.nanoTime();
+        ++this.tickCounter;
+
+        this.updateTimeLightAndEntities();
+
+        if (var1 - this.field_147142_T >= 5000000000L)
+        {
+            this.field_147142_T = var1;
+            this.field_147147_p.func_151319_a(new ServerStatusResponse.PlayerCountData(this.getMaxPlayers(), this.getCurrentPlayerCount()));
+            GameProfile[] var3 = new GameProfile[Math.min(this.getCurrentPlayerCount(), 12)];
+            int var4 = MathHelper.getRandomIntegerInRange(this.field_147146_q, 0, this.getCurrentPlayerCount() - var3.length);
+
+            for (int var5 = 0; var5 < var3.length; ++var5)
+            {
+                var3[var5] = ((EntityPlayerMP)this.serverConfigManager.playerEntityList.get(var4 + var5)).getGameProfile();
+            }
+
+            Collections.shuffle(Arrays.asList(var3));
+            this.field_147147_p.func_151318_b().func_151330_a(var3);
+        }
+
+        if (this.tickCounter % 900 == 0)
+        {
+            this.serverConfigManager.saveAllPlayerData();
+            this.saveAllWorlds(true);
+            
+        }
+        this.tickTimeArray[this.tickCounter % 100] = System.nanoTime() - var1;
+    }
+
+    public void updateTimeLightAndEntities()
+    {
+        int var1;
+
+        for (var1 = 0; var1 < this.worldServers.length; ++var1)
+        {
+            long var2 = System.nanoTime();
+
+            if (var1 == 0)
+            {
+                WorldServer var4 = this.worldServers[var1];
+
+                if (this.tickCounter % 20 == 0)
+                {
+                    this.serverConfigManager.func_148537_a(new S03PacketTimeUpdate(var4.getTotalWorldTime(), var4.getWorldTime()));
+                }
+
+             
+
+                try
+                {
+                    var4.tick();
+                }
+                catch (Throwable var8)
+                {
+                	System.out.println("[Server thread/ERROR]: "+var8.getMessage());
+                }
+
+                try
+                {
+                    var4.updateEntities();
+                }
+                catch (Throwable var7)
+                {
+                	System.out.println("[Server thread/ERROR]: "+var7.getMessage());
+                }
+                var4.getEntityTracker().updateTrackedEntities();
+            }
+
+            this.timeOfLastDimensionTick[var1][this.tickCounter % 100] = System.nanoTime() - var2;
+        }
+
+        this.func_147137_ag().networkTick();
+        this.serverConfigManager.sendPlayerInfoToAllPlayers();
+       
+        for (var1 = 0; var1 < this.tickables.size(); ++var1)
+        {
+            ((IUpdatePlayerListBoxServer)this.tickables.get(var1)).update();
+        }
+
+        
+    }
+
+   
+    public void startServerThread()
+    {
+        (new Thread("Server thread")
+        {
+            public void run()
+            {
+                TheStructureWorldServer.this.run();
+            }
+        }).start();
+    }
+
+    /**
+     * Returns a File object from the specified string.
+     */
+    public File getFile(String p_71209_1_)
+    {
+        return new File(this.getDataDirectory(), p_71209_1_);
+    }
+
+    /**
+     * Logs the message with a level of WARN.
+     */
+    public void logWarning(String p_71236_1_)
+    {
+        logger.warn(p_71236_1_);
+    }
+
+    /**
+     * Gets the worldServer by the given dimension.
+     */
+    public WorldServer worldServer()
+    {
+        return this.worldServers[0];
+    }
+
+  
+    public String getVersion()
+    {
+        return "V1.0.0";
+    }
+
+    /**
+     * Returns the number of players currently on the server.
+     */
+    public int getCurrentPlayerCount()
+    {
+        return this.serverConfigManager.getCurrentPlayerCount();
+    }
+
+    /**
+     * Returns the maximum number of players allowed on the server.
+     */
+    public int getMaxPlayers()
+    {
+        return this.serverConfigManager.getMaxPlayers();
+    }
+
+    /**
+     * Returns an array of the usernames of all the connected players.
+     */
+    public String[] getAllUsernames()
+    {
+        return this.serverConfigManager.getAllUsernames();
+    }
+
+    public GameProfile[] func_152357_F()
+    {
+        return this.serverConfigManager.func_152600_g();
+    }
+
+    public String getServerModName()
+    {
+        return "vanilla";
+    }
+
+    
+   
+
+    /**
+     * Gets the Server.
+     */
+    public static TheStructureWorldServer getServer()
+    {
+        return Server;
+    }
+    public String getCommandSenderName()
+    {
+        return "Server";
+    }
+
+    /**
+     * Gets KeyPair instanced in TheStructureWorldServer.
+     */
+    public KeyPair getKeyPair()
+    {
+        return this.serverKeyPair;
+    }
+
+    /**
+     * Returns the username of the server owner (for integrated servers)
+     */
+    public String getServerOwner()
+    {
+        return this.serverOwner;
+    }
+
+    /**
+     * Sets the username of the owner of this server (in the case of an integrated server)
+     */
+    public void setServerOwner(String p_71224_1_)
+    {
+        this.serverOwner = p_71224_1_;
+    }
+
+    public boolean isSinglePlayer()
+    {
+        return this.serverOwner != null;
+    }
+
+    public String getFolderName()
+    {
+        return this.folderName;
+    }
+
+    public void setFolderName(String p_71261_1_)
+    {
+        this.folderName = p_71261_1_;
+    }
+
+    public void setWorldName(String p_71246_1_)
+    {
+        this.worldName = p_71246_1_;
+    }
+
+    public String getWorldName()
+    {
+        return this.worldName;
+    }
+
+    public void setKeyPair(KeyPair p_71253_1_)
+    {
+        this.serverKeyPair = p_71253_1_;
+    }
+
+    public void setDifficulty(String s)
+    {
+        for (int var2 = 0; var2 < this.worldServers.length; ++var2)
+        {
+            WorldServer var3 = this.worldServers[var2];
+
+            if (var3 != null)
+            {
+                if (var3.getStructureWorldInfo().getDifficulty().contains("Hard"))
+                {
+                    var3.difficultySetting = "Hard";
+                    var3.setAllowedSpawnTypes(true, true);
+                }
+                else if (this.isSinglePlayer())
+                {
+                    var3.difficultySetting = s;
+                    var3.setAllowedSpawnTypes(true, true);
+                }
+                else
+                {
+                    var3.difficultySetting = s;
+                    var3.setAllowedSpawnTypes(this.allowSpawnMonsters(), this.canSpawnAnimals);
+                }
+            }
+        }
+    }
+
+    protected boolean allowSpawnMonsters()
+    {
+        return true;
+    }
+
+    public void canCreateBadSpots(int p_71194_1_)
+    {
+        this.enableBadSpots = p_71194_1_;
+    }
+
+    public ISaveFormat getActiveAnvilConverter()
+    {
+        return this.anvilConverterForAnvilFile;
+    }
+
+    /**
+     * WARNING : directly calls
+     * getActiveAnvilConverter().deleteWorldDirectory(theWorldServer[0].getSaveHandler().getWorldDirectoryName());
+     */
+    public void deleteWorldAndStopServer()
+    {
+        this.worldIsBeingDeleted = true;
+        this.getActiveAnvilConverter().flushCache();
+
+        for (int var1 = 0; var1 < this.worldServers.length; ++var1)
+        {
+            WorldServer var2 = this.worldServers[var1];
+
+            if (var2 != null)
+            {
+                var2.flush();
+            }
+        }
+        this.getActiveAnvilConverter().deleteWorldDirectory(this.worldServers[0].getSaveHandler().getWorldDirectoryName());
+        this.initiateShutdown();
+    }
+    
+
+    public String func_147133_T()
+    {
+        return this.field_147141_M;
+    }
+
+   
+    /**
+     * Returns whether snooping is enabled or not.
+     */
+    public boolean isSnooperEnabled()
+    {
+        return true;
+    }
+
+    public abstract boolean isDedicatedServer();
+
+    public boolean isServerInOnlineMode()
+    {
+        return this.onlineMode;
+    }
+
+    public void setOnlineMode(boolean p_71229_1_)
+    {
+        this.onlineMode = p_71229_1_;
+    }
+
+    public boolean getCanSpawnAnimals()
+    {
+        return this.canSpawnAnimals;
+    }
+
+    public void setCanSpawnAnimals(boolean p_71251_1_)
+    {
+        this.canSpawnAnimals = p_71251_1_;
+    }
+
+    public boolean isPVPEnabled()
+    {
+        return this.pvpEnabled;
+    }
+
+    public void setAllowPvp(boolean p_71188_1_)
+    {
+        this.pvpEnabled = p_71188_1_;
+    }
+
+    public boolean isFlightAllowed()
+    {
+        return this.allowFlight;
+    }
+
+    public void setAllowFlight(boolean p_71245_1_)
+    {
+        this.allowFlight = p_71245_1_;
+    }
+
+    /**
+     * Return whether command BasicEntityRender are enabled.
+     */
+    public abstract boolean isCommandTerrainObjectEnabled();
+
+    public String getMOTD()
+    {
+        return this.motd;
+    }
+
+    public void setMOTD(String p_71205_1_)
+    {
+        this.motd = p_71205_1_;
+    }
+
+    public int getBuildLimit()
+    {
+        return this.buildLimit;
+    }
+
+    public void setBuildLimit(int p_71191_1_)
+    {
+        this.buildLimit = p_71191_1_;
+    }
+
+    public ServerConfigurationManager getConfigurationManager()
+    {
+        return this.serverConfigManager;
+    }
+
+    public void func_152361_a(ServerConfigurationManager p_152361_1_)
+    {
+        this.serverConfigManager = p_152361_1_;
+    }
+
+    /**
+     * Sets the game type for all worlds.
+     */
+    public void setGameType(WorldSettings.GameType p_71235_1_)
+    {
+        for (int var2 = 0; var2 < this.worldServers.length; ++var2)
+        {
+            getServer().worldServers[var2].getStructureWorldInfo().setGameType(p_71235_1_);
+        }
+    }
+
+    public NetworkSystem func_147137_ag()
+    {
+        return this.field_147144_o;
+    }
+
+    public boolean serverIsInRunLoop()
+    {
+        return this.serverIsRunning;
+    }
+
+    public boolean getGuiEnabled()
+    {
+        return false;
+    }
+
+    public abstract String shareToLAN(WorldSettings.GameType p_71206_1_, boolean p_71206_2_);
+
+    public int getTickCounter()
+    {
+        return this.tickCounter;
+    }
+
+    public void enableProfiling()
+    {
+        this.startProfiling = true;
+    }
+
+
+    /**
+     * Return the position for this command sender.
+     */
+    public AreaCoordinates getPlayerCoordinates()
+    {
+        return new AreaCoordinates(0, 0, 0);
+    }
+
+    public World getEntityWorld()
+    {
+        return this.worldServers[0];
+    }
+
+    /**
+     * Return the spawn protection area's size.
+     */
+    public int getSpawnProtectionSize()
+    {
+        return 16;
+    }
+
+    /**
+     * Returns true if a player does not have permission to edit the TerrainObject at the given coordinates.
+     */
+    public boolean isTerrainObjectProtected(World p_96290_1_, int p_96290_2_, int p_96290_3_, int p_96290_4_, EntityPlayer p_96290_5_)
+    {
+        return false;
+    }
+
+    public boolean getForceGamemode()
+    {
+        return this.isGamemodeForced;
+    }
+
+    public Proxy getServerProxy()
+    {
+        return this.serverProxy;
+    }
+
+    /**
+     * returns the difference, measured in milliseconds, between the current system time and midnight, January 1, 1970
+     * UTC.
+     */
+    public static long getSystemTimeMillis()
+    {
+        return System.currentTimeMillis();
+    }
+
+    public int func_143007_ar()
+    {
+        return this.field_143008_E;
+    }
+
+    public void func_143006_e(int p_143006_1_)
+    {
+        this.field_143008_E = p_143006_1_;
+    }
+
+    public boolean func_147136_ar()
+    {
+        return true;
+    }
+
+    public PlayerProfileCache func_152358_ax()
+    {
+        return this.field_152366_X;
+    }
+
+    public ServerStatusResponse func_147134_at()
+    {
+        return this.field_147147_p;
+    }
+
+    public void func_147132_au()
+    {
+        this.field_147142_T = 0L;
+    }
+}

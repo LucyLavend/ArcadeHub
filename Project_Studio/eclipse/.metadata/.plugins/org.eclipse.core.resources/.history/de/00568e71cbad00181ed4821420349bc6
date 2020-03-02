@@ -1,0 +1,292 @@
+package nl.thestructureworld.client.renderer.terrain;
+
+import java.util.List;
+
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.renderer.entity.EntityPlantRender;
+import nl.thestructureworld.client.renderer.entity.ModelBasic;
+import nl.thestructureworld.client.shaders.Light;
+import nl.thestructureworld.client.shaders.Matrix;
+import nl.thestructureworld.client.shaders.RawModel;
+import nl.thestructureworld.client.shaders.terrain.TerrainShader;
+import nl.thestructureworld.terrainandobjects.TerrainObject;
+import nl.thestructureworld.world.World;
+import nl.thestructureworld.world.area.ExtendedTerrainObjectStorage;
+
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+
+public class TerrainRenderer 
+{
+	private TerrainShader shader;
+	public int textureblendmap;
+	
+	public TerrainRenderer(TerrainShader shader, Matrix4f projectionMatrix) 
+	{
+		this.shader = shader;
+		if(textureblendmap==0 && shader.activateNormals)
+		{
+		textureblendmap=TheStructureWorld.TheStructureWorld.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/Mipmap.png");
+		}
+		shader.start();
+		shader.loadProjectionMatrix(projectionMatrix);
+		shader.connecttextureUnit();
+		shader.stop();
+	}
+	
+	public static int terrain4 = 0;
+	public static int terrain5 = 0;
+	public static int terrain6 = 0;
+	public static int terrain7 = 0;
+	public static int terrain8 = 0;
+	public static int terrain9 = 0;
+	public static int terrain10 = 0;
+	public static int terrain11 = 0;
+	public static int terrain12 = 0;
+	public ModelBasic terrain;
+	
+	public int maxX = 0;
+	public int minX = 0;
+	public int maxZ = 0;
+	public int minZ = 0;
+	
+	public static TerrainObject TerrainObject()
+	{
+		return TerrainObject.DirtTerrain;
+	}
+	
+	public static void createFlora(ExtendedTerrainObjectStorage ExtendedTerrainObjectStorage,int X, int Y, int Z)
+	{
+	    //ExtendedTerrainObjectStorage.setTerrain(X, Y & 15, Z, TerrainObject.air);
+	    System.out.print("Test");
+    }
+	
+	public static void createFlora2(float x, float y, float z)
+	{
+		 //TheStructureWorld.TheStructureWorld.theWorld.StructureWorldInfo.seed;
+		
+		 //EntityRenderer.nmr.addEntity(new EntityPlantRender(new ModelBasic(true,0,EntityRenderer.fern,9,0F,0, "objectsandterrain/plant/512x/palm_leaf",new Vector4f(0.5F,1.5F,0F,0F),105,false,false), new float[]{x,z},0,0,0,0,0.2F));
+	}
+	
+	public boolean setMinMax(Terrain terrain,String[] coords)
+	{
+		if(this.maxX < terrain.X+Integer.parseInt(coords[0]))
+		{
+			this.maxX =	(int)(terrain.X+Integer.parseInt(coords[0]));
+			return true;
+		}
+		if(this.minX > terrain.X+Integer.parseInt(coords[0]))
+		{
+			this.minX =	(int)(terrain.X+Integer.parseInt(coords[0]));
+			return true;
+		}
+		if(this.maxZ < terrain.X+Integer.parseInt(coords[0]))
+		{
+			this.maxZ =	(int)(terrain.Z+Integer.parseInt(coords[0]));
+			return true;
+		}
+		if(this.minZ > terrain.Z+Integer.parseInt(coords[0]))
+		{
+			this.minZ =	(int)(terrain.Z+Integer.parseInt(coords[0]));
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	
+	public void render(Terrain terrain,List<Light> lights,Vector4f vec,int planeType,boolean invert) 
+	{
+			String[] coords4 = EntityRenderer.worldRenderer.ArrayListTerrain4.get(0).AreaCode.split("_");
+			String[] coords5 = EntityRenderer.worldRenderer.ArrayListTerrain5.get(0).AreaCode.split("_");
+			String[] coords6 = EntityRenderer.worldRenderer.ArrayListTerrain6.get(0).AreaCode.split("_");
+			String[] coords7 = EntityRenderer.worldRenderer.ArrayListTerrain7.get(0).AreaCode.split("_");
+			String[] coords8 = EntityRenderer.worldRenderer.ArrayListTerrain8.get(0).AreaCode.split("_");
+			String[] coords9 = EntityRenderer.worldRenderer.ArrayListTerrain9.get(0).AreaCode.split("_");
+			String[] coords10 = EntityRenderer.worldRenderer.ArrayListTerrain10.get(0).AreaCode.split("_");
+			String[] coords11 = EntityRenderer.worldRenderer.ArrayListTerrain11.get(0).AreaCode.split("_");
+			String[] coords12 = EntityRenderer.worldRenderer.ArrayListTerrain12.get(0).AreaCode.split("_");
+			
+			shader.start();
+			shader.loadSkyColor(EntityRenderer.skyColor,EntityRenderer.fogDensity,EntityRenderer.fogGradient);
+			shader.loadLight(lights);
+			shader.loadPlaneType(planeType);
+			if(vec != null)
+	        {
+	        shader.loadPlane(vec);
+	        shader.loadInvertDot(invert);
+	        }
+			shader.loadViewMatrix();
+			shader.loadSkyColor(EntityRenderer.skyColor,EntityRenderer.fogDensity,EntityRenderer.fogGradient);
+			shader.loadShineVariables(10, 0F);
+			shader.loadTextureRepeating(ModelBasic.fixTexture*ModelBasic.repeat);
+			GL13.glActiveTexture(GL13.GL_TEXTURE5);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureblendmap);
+			GL13.glActiveTexture(GL13.GL_TEXTURE4);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, ModelBasic.textureblendmap);
+			GL13.glActiveTexture(GL13.GL_TEXTURE3);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, ModelBasic.textureID3);
+			GL13.glActiveTexture(GL13.GL_TEXTURE2);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, ModelBasic.textureID2);
+			GL13.glActiveTexture(GL13.GL_TEXTURE1);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, ModelBasic.textureID);
+			GL13.glActiveTexture(GL13.GL_TEXTURE0);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, ModelBasic.texturebackground);
+
+			GL11.glEnable(GL11.GL_CULL_FACE);
+			//Enable/Start
+			//Middle
+			if(terrain4==0){
+			GL11.glNewList(4, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords4);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain4.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords4[0]), terrain.Y, terrain.Z+Integer.parseInt(coords4[1])), 0, 0, 0, 1));	
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain4.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain4=1;
+			//Size is 1, save worldHeight and objects in list
+			System.out.println("Data: "+EntityRenderer.worldRenderer.ArrayListTerrain4.get(0).AreaCode);
+			for(int i=0;i<EntityRenderer.worldRenderer.ArrayListTerrain4.size();++i)
+			{
+			System.out.println("Data: "+EntityRenderer.worldRenderer.ArrayListTerrain4.get(i).object);
+			System.out.println("Size: "+EntityRenderer.worldRenderer.ArrayListTerrain4.size());
+			}
+			}
+			if(terrain5==0){
+			GL11.glNewList(5, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords5);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain5.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords5[0]), terrain.Y, terrain.Z+Integer.parseInt(coords5[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain5.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain5=1;
+			}
+			
+			if(terrain6==0){
+			GL11.glNewList(6, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords6);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain6.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords6[0]), terrain.Y, terrain.Z+Integer.parseInt(coords6[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain6.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain6=1;
+			}
+			
+			if(terrain7==0){
+			GL11.glNewList(7, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords7);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain7.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords7[0]), terrain.Y, terrain.Z+Integer.parseInt(coords7[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain7.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain7=1;
+			}
+			
+			if(terrain8==0){
+			GL11.glNewList(8, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords8);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain8.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords8[0]), terrain.Y, terrain.Z+Integer.parseInt(coords8[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain8.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain8=1;
+			}
+			
+			if(terrain9==0){
+			GL11.glNewList(9, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords9);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain9.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords9[0]), terrain.Y, terrain.Z+Integer.parseInt(coords9[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain9.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain9=1;
+			}
+			
+			if(terrain10==0){
+			GL11.glNewList(10, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords10);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain10.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords10[0]), terrain.Y, terrain.Z+Integer.parseInt(coords10[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain10.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain10=1;
+			}
+			
+			if(terrain11==0){
+			GL11.glNewList(11, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords11);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain11.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords11[0]), terrain.Y, terrain.Z+Integer.parseInt(coords11[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain11.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain11=1;
+			}
+			
+			if(terrain12==0){
+			GL11.glNewList(12, GL11.GL_COMPILE);
+			this.setMinMax(terrain, coords12);
+			GL30.glBindVertexArray(EntityRenderer.worldRenderer.ArrayListTerrain12.get(0).terrain.rawModel.getVaoID());
+			GL20.glEnableVertexAttribArray(0);
+			GL20.glEnableVertexAttribArray(1);
+			GL20.glEnableVertexAttribArray(2);
+			shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f(terrain.X+Integer.parseInt(coords12[0]), terrain.Y, terrain.Z+Integer.parseInt(coords12[1])), 0, 0, 0, 1));
+			GL11.glDrawElements(GL11.GL_TRIANGLES,EntityRenderer.worldRenderer.ArrayListTerrain12.get(0).terrain.rawModel.getVertexCount(),GL11.GL_UNSIGNED_INT, 0);
+			GL11.glEndList();
+			terrain12=1;
+			}
+		
+			//System.out.print("Test");
+
+			GL11.glCallList(4);
+			GL11.glCallList(5);
+			GL11.glCallList(6);
+			GL11.glCallList(7);
+			GL11.glCallList(8);
+			GL11.glCallList(9);
+			GL11.glCallList(10);
+			GL11.glCallList(11);
+			GL11.glCallList(12);
+			
+			GL20.glDisableVertexAttribArray(0);
+			GL20.glDisableVertexAttribArray(1);
+			GL20.glDisableVertexAttribArray(2);
+			GL30.glBindVertexArray(0);
+			//Disable/Clear
+			GL11.glDisable(GL11.GL_CULL_FACE);
+			shader.stop();
+	}
+	//GL11.glNewList(1, GL11.GL_COMPILE);GL11.glEndList();GL11.glCallList(1);
+}

@@ -1,0 +1,899 @@
+[
+  {
+    "symbolicName": "trove4j-3.0.3",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "42ccaf4761f0dfdfa805c9e340d99a755907e2dd",
+    "jarFileModificationDate": "2016-06-10T21:51:53.508+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\net\\sf\\trove4j\\trove4j\\3.0.3\\trove4j-3.0.3.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.httpcomponents.httpclient",
+    "version": {
+      "major": 4,
+      "minor": 3,
+      "micro": 3,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "18f4247ff4572a074444572cee34647c43e7c9c7",
+    "jarFileModificationDate": "2016-06-10T21:51:48.440+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\apache\\httpcomponents\\httpclient\\4.3.3\\httpclient-4.3.3.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.paulscode.codecjorbis",
+    "version": {
+      "major": 20101023,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "c73b5636faf089d9f00e8732a829577de25237ee",
+    "jarFileModificationDate": "2016-06-10T21:51:48.972+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\paulscode\\codecjorbis\\20101023\\codecjorbis-20101023.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.google.guava",
+    "version": {
+      "major": 15,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "ed727a8d9f247e2050281cb083f1c77b09dcb5cd",
+    "jarFileModificationDate": "2016-06-10T21:51:50.310+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\google\\guava\\guava\\15.0\\guava-15.0.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "3f881e3b34693a96cd3d9e20d6aeabae98757359",
+    "jarFileModificationDate": "2018-09-05T22:00:28.840+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\sunpkcs11.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "org.apache.commons.logging",
+    "version": {
+      "major": 1,
+      "minor": 1,
+      "micro": 3,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "f6f66e966c70a83ffbdb6f17a0919eaf7c8aca7f",
+    "jarFileModificationDate": "2016-06-10T21:51:48.831+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\commons-logging\\commons-logging\\1.1.3\\commons-logging-1.1.3.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "lwjgl_util-2.9.1",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "290d7ba8a1bd9566f5ddf16ad06f09af5ec9b20e",
+    "jarFileModificationDate": "2016-06-10T21:51:47.827+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\lwjgl\\lwjgl\\lwjgl_util\\2.9.1\\lwjgl_util-2.9.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "9cb165148c4f115e371358123c466b966b075e13",
+    "jarFileModificationDate": "2018-09-05T22:00:28.834+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\sunjce_provider.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "39fdcb5beddc6f7fa76d8e238d5f7bb5570aa585",
+    "jarFileModificationDate": "2018-09-05T22:00:28.801+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\access-bridge-64.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "org.apache.commons.codec",
+    "version": {
+      "major": 1,
+      "minor": 9,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "9ce04e34240f674bc72680f8b843b1457383161a",
+    "jarFileModificationDate": "2016-06-10T21:51:47.858+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\commons-codec\\commons-codec\\1.9\\commons-codec-1.9.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "215baa3d9ea1b0b9417ad764c93d4637aafc868c",
+    "jarFileModificationDate": "2018-09-05T22:00:28.806+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\cldrdata.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "efd51efe27cf422fe389bc766991d3d9afafc31e",
+    "jarFileModificationDate": "2018-09-05T22:00:31.897+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\rt.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a78ac73c7dc95f634ef919b2a47288b8c6231ef6",
+    "jarFileModificationDate": "2018-09-05T22:00:28.916+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\jfr.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "com.paulscode.codecwav",
+    "version": {
+      "major": 20101023,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "12f031cfe88fef5c1dd36c563c0a3a69bd7261da",
+    "jarFileModificationDate": "2016-06-10T21:51:48.348+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\paulscode\\codecwav\\20101023\\codecwav-20101023.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "52515ac6deab634f3495fd724dea643ee442b8fd",
+    "jarFileModificationDate": "2018-09-05T22:00:28.905+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\jce.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "com.paulscode.libraryjavasound",
+    "version": {
+      "major": 20101123,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "5c5e304366f75f9eaa2e8cca546a1fb6109348b3",
+    "jarFileModificationDate": "2016-06-10T21:51:48.079+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\paulscode\\libraryjavasound\\20101123\\libraryjavasound-20101123.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "87b82211eacd68aefb17e28ebdbf80437c1ec758",
+    "jarFileModificationDate": "2018-09-05T22:00:32.895+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\jfxrt.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "e0e22f269d95d66059513afbeb8439e426b15a5a",
+    "jarFileModificationDate": "2018-09-05T22:00:32.282+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\localedata.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "jinput-2.0.5",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "39c7796b469a600f72380316f6b1f11db6c2c7c4",
+    "jarFileModificationDate": "2016-06-10T21:51:49.353+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\net\\java\\jinput\\jinput\\2.0.5\\jinput-2.0.5.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "9704008d32caa1876f27d9d4a3f3099e826ca8b4",
+    "jarFileModificationDate": "2018-09-05T22:00:28.950+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\resources.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "com.paulscode.codecwav",
+    "version": {
+      "major": 20101023,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "12f031cfe88fef5c1dd36c563c0a3a69bd7261da",
+    "jarFileModificationDate": "2016-06-10T21:51:48.348+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\paulscode\\codecwav\\20101023\\codecwav-20101023.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.lang3",
+    "version": {
+      "major": 3,
+      "minor": 1,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "905075e6c80f206bbe6cf1e809d2caa69f420c76",
+    "jarFileModificationDate": "2016-06-10T21:51:48.123+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\apache\\commons\\commons-lang3\\3.1\\commons-lang3-3.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jinput-2.0.5",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "39c7796b469a600f72380316f6b1f11db6c2c7c4",
+    "jarFileModificationDate": "2016-06-10T21:51:49.353+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\net\\java\\jinput\\jinput\\2.0.5\\jinput-2.0.5.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.google.guava",
+    "version": {
+      "major": 15,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "ed727a8d9f247e2050281cb083f1c77b09dcb5cd",
+    "jarFileModificationDate": "2016-06-10T21:51:50.310+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\google\\guava\\guava\\15.0\\guava-15.0.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.paulscode.libraryjavasound",
+    "version": {
+      "major": 20101123,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "5c5e304366f75f9eaa2e8cca546a1fb6109348b3",
+    "jarFileModificationDate": "2016-06-10T21:51:48.079+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\paulscode\\libraryjavasound\\20101123\\libraryjavasound-20101123.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "c9361cd163bdbafae16af05bd111a48a99ce1530",
+    "jarFileModificationDate": "2018-09-05T22:00:32.130+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\charsets.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "org.apache.commons.io",
+    "version": {
+      "major": 2,
+      "minor": 4,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "b1b6ea3b7e4aa4f492509a4952029cd8e48019ad",
+    "jarFileModificationDate": "2016-06-10T21:51:49.153+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\commons-io\\commons-io\\2.4\\commons-io-2.4.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "1.7.10",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "21c98017cac71c813ca43d4e94438134603887fd",
+    "jarFileModificationDate": "2018-01-28T12:23:31.725+01:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\versions\\1.7.10\\1.7.10.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.paulscode.librarylwjglopenal",
+    "version": {
+      "major": 20100824,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "73e80d0794c39665aec3f62eee88ca91676674ef",
+    "jarFileModificationDate": "2016-06-10T21:51:48.587+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\paulscode\\librarylwjglopenal\\20100824\\librarylwjglopenal-20100824.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "d29b5141f24708ed1411dc6dca189f1f6034b856",
+    "jarFileModificationDate": "2018-09-05T22:00:28.825+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\nashorn.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "com.paulscode.codecjorbis",
+    "version": {
+      "major": 20101023,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "c73b5636faf089d9f00e8732a829577de25237ee",
+    "jarFileModificationDate": "2016-06-10T21:51:48.972+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\paulscode\\codecjorbis\\20101023\\codecjorbis-20101023.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "lwjgl-2.9.1",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "f58c5aabcef0e41718a564be9f8e412fff8db847",
+    "jarFileModificationDate": "2016-06-10T21:51:50.204+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\lwjgl\\lwjgl\\lwjgl\\2.9.1\\lwjgl-2.9.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "f4541459714ea68beb71ef7e2e0391bf97aa31c1",
+    "jarFileModificationDate": "2018-09-05T22:00:28.837+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\sunmscapi.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "org.apache.httpcomponents.httpclient",
+    "version": {
+      "major": 4,
+      "minor": 3,
+      "micro": 3,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "18f4247ff4572a074444572cee34647c43e7c9c7",
+    "jarFileModificationDate": "2016-06-10T21:51:48.440+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\apache\\httpcomponents\\httpclient\\4.3.3\\httpclient-4.3.3.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "c75657e3d42a3703220b66d463509f312d45fc35",
+    "jarFileModificationDate": "2018-09-05T22:00:28.817+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\jaccess.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "lwjgl-2.9.1",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "f58c5aabcef0e41718a564be9f8e412fff8db847",
+    "jarFileModificationDate": "2016-06-10T21:51:50.204+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\lwjgl\\lwjgl\\lwjgl\\2.9.1\\lwjgl-2.9.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.logging.log4j-api",
+    "version": {
+      "major": 2,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": "beta9"
+    },
+    "jarFileFingerprint": "1dd66e68cccd907880229f9e2de1314bd13ff785",
+    "jarFileModificationDate": "2016-06-10T21:51:47.806+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\apache\\logging\\log4j\\log4j-api\\2.0-beta9\\log4j-api-2.0-beta9.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.logging",
+    "version": {
+      "major": 1,
+      "minor": 1,
+      "micro": 3,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "f6f66e966c70a83ffbdb6f17a0919eaf7c8aca7f",
+    "jarFileModificationDate": "2016-06-10T21:51:48.831+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\commons-logging\\commons-logging\\1.1.3\\commons-logging-1.1.3.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.io",
+    "version": {
+      "major": 2,
+      "minor": 4,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "b1b6ea3b7e4aa4f492509a4952029cd8e48019ad",
+    "jarFileModificationDate": "2016-06-10T21:51:49.153+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\commons-io\\commons-io\\2.4\\commons-io-2.4.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "net.java.jutils.jutils",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "e12fe1fda814bd348c1579329c86943d2cd3c6a6",
+    "jarFileModificationDate": "2016-06-10T21:51:48.877+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\net\\java\\jutils\\jutils\\1.0.0\\jutils-1.0.0.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "lwjgl_util-2.9.1",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "290d7ba8a1bd9566f5ddf16ad06f09af5ec9b20e",
+    "jarFileModificationDate": "2016-06-10T21:51:47.827+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\lwjgl\\lwjgl\\lwjgl_util\\2.9.1\\lwjgl_util-2.9.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "net.sf.jopt-simple.jopt-simple",
+    "version": {
+      "major": 4,
+      "minor": 5,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "6065cc95c661255349c1d0756657be17c29a4fd3",
+    "jarFileModificationDate": "2016-06-10T21:51:48.711+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\net\\sf\\jopt-simple\\jopt-simple\\4.5\\jopt-simple-4.5.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.google.gson",
+    "version": {
+      "major": 2,
+      "minor": 2,
+      "micro": 4,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a60a5e993c98c864010053cb901b7eab25306568",
+    "jarFileModificationDate": "2016-06-10T21:51:47.807+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\google\\code\\gson\\gson\\2.2.4\\gson-2.2.4.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "net.sf.jopt-simple.jopt-simple",
+    "version": {
+      "major": 4,
+      "minor": 5,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "6065cc95c661255349c1d0756657be17c29a4fd3",
+    "jarFileModificationDate": "2016-06-10T21:51:48.711+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\net\\sf\\jopt-simple\\jopt-simple\\4.5\\jopt-simple-4.5.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.logging.log4j-api",
+    "version": {
+      "major": 2,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": "beta9"
+    },
+    "jarFileFingerprint": "1dd66e68cccd907880229f9e2de1314bd13ff785",
+    "jarFileModificationDate": "2016-06-10T21:51:47.806+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\apache\\logging\\log4j\\log4j-api\\2.0-beta9\\log4j-api-2.0-beta9.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.lang3",
+    "version": {
+      "major": 3,
+      "minor": 1,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "905075e6c80f206bbe6cf1e809d2caa69f420c76",
+    "jarFileModificationDate": "2016-06-10T21:51:48.123+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\apache\\commons\\commons-lang3\\3.1\\commons-lang3-3.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "e17594c2b5c1b1f3803c9a02327ca596b08e2fe2",
+    "jarFileModificationDate": "2018-09-05T22:00:28.816+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\dnsns.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "net.java.jutils.jutils",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "e12fe1fda814bd348c1579329c86943d2cd3c6a6",
+    "jarFileModificationDate": "2016-06-10T21:51:48.877+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\net\\java\\jutils\\jutils\\1.0.0\\jutils-1.0.0.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "b677fcf2e2b6a257827577b746dfa4fefe8d91a3",
+    "jarFileModificationDate": "2018-09-05T22:00:32.013+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\jsse.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "com.paulscode.librarylwjglopenal",
+    "version": {
+      "major": 20100824,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "73e80d0794c39665aec3f62eee88ca91676674ef",
+    "jarFileModificationDate": "2016-06-10T21:51:48.587+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\paulscode\\librarylwjglopenal\\20100824\\librarylwjglopenal-20100824.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.codec",
+    "version": {
+      "major": 1,
+      "minor": 9,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "9ce04e34240f674bc72680f8b843b1457383161a",
+    "jarFileModificationDate": "2016-06-10T21:51:47.858+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\commons-codec\\commons-codec\\1.9\\commons-codec-1.9.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "io.netty.netty-all",
+    "version": {
+      "major": 4,
+      "minor": 0,
+      "micro": 10,
+      "qualifier": "Final"
+    },
+    "jarFileFingerprint": "9e50bd52ffe257a0e2cd8d971688d6ce7d174325",
+    "jarFileModificationDate": "2016-06-10T21:51:53.694+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\io\\netty\\netty-all\\4.0.10.Final\\netty-all-4.0.10.Final.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.google.gson",
+    "version": {
+      "major": 2,
+      "minor": 2,
+      "micro": 4,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a60a5e993c98c864010053cb901b7eab25306568",
+    "jarFileModificationDate": "2016-06-10T21:51:47.807+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\google\\code\\gson\\gson\\2.2.4\\gson-2.2.4.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "aa562737661f5bda74b115087f8c1d0ca96531be",
+    "jarFileModificationDate": "2018-09-05T22:00:28.841+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\zipfs.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "io.netty.netty-all",
+    "version": {
+      "major": 4,
+      "minor": 0,
+      "micro": 10,
+      "qualifier": "Final"
+    },
+    "jarFileFingerprint": "9e50bd52ffe257a0e2cd8d971688d6ce7d174325",
+    "jarFileModificationDate": "2016-06-10T21:51:53.694+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\io\\netty\\netty-all\\4.0.10.Final\\netty-all-4.0.10.Final.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.paulscode.soundsystem",
+    "version": {
+      "major": 20120107,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "419c05fe9be71f792b2d76cfc9b67f1ed0fec7f6",
+    "jarFileModificationDate": "2016-06-10T21:51:48.900+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\com\\paulscode\\soundsystem\\20120107\\soundsystem-20120107.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "vecmath-1.3.1",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a0ae4f51da409fa0c20fa0ca59e6bbc9413ae71d",
+    "jarFileModificationDate": "2016-06-10T21:51:48.701+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\java3d\\vecmath\\1.3.1\\vecmath-1.3.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "1.7.10",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "21c98017cac71c813ca43d4e94438134603887fd",
+    "jarFileModificationDate": "2018-01-28T12:23:31.725+01:00",
+    "location": "C:\\Game\\Game\\jars\\versions\\1.7.10\\1.7.10.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.compress",
+    "version": {
+      "major": 1,
+      "minor": 8,
+      "micro": 1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a698750c16740fd5b3871425f4cb3bbaa87f529d",
+    "jarFileModificationDate": "2016-06-10T21:51:49.098+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\apache\\commons\\commons-compress\\1.8.1\\commons-compress-1.8.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.httpcomponents.httpcore",
+    "version": {
+      "major": 4,
+      "minor": 3,
+      "micro": 2,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "31fbbff1ddbf98f3aa7377c94d33b0447c646b6e",
+    "jarFileModificationDate": "2016-06-10T21:51:48.738+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\apache\\httpcomponents\\httpcore\\4.3.2\\httpcore-4.3.2.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.logging.log4j-core",
+    "version": {
+      "major": 2,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": "beta9"
+    },
+    "jarFileFingerprint": "678861ba1b2e1fccb594bb0ca03114bb05da9695",
+    "jarFileModificationDate": "2016-06-10T21:51:48.632+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\apache\\logging\\log4j\\log4j-core\\2.0-beta9\\log4j-core-2.0-beta9.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "jre",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "82a0f9c5cbc2b79bdb6cfe80487691e232b26f9c",
+    "jarFileModificationDate": "2018-09-05T22:00:28.831+02:00",
+    "location": "C:\\Program Files\\Java\\jre1.8.0_91\\lib\\ext\\sunec.jar",
+    "javaRuntime": true
+  },
+  {
+    "symbolicName": "com.google.gson",
+    "version": {
+      "major": 2,
+      "minor": 2,
+      "micro": 4,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a60a5e993c98c864010053cb901b7eab25306568",
+    "jarFileModificationDate": "2016-06-10T21:51:47.807+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\versions\\lwjgl\\lwjgl-natives\\gson-2.2.4.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "trove4j-3.0.3",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "42ccaf4761f0dfdfa805c9e340d99a755907e2dd",
+    "jarFileModificationDate": "2016-06-10T21:51:53.508+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\net\\sf\\trove4j\\trove4j\\3.0.3\\trove4j-3.0.3.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.httpcomponents.httpcore",
+    "version": {
+      "major": 4,
+      "minor": 3,
+      "micro": 2,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "31fbbff1ddbf98f3aa7377c94d33b0447c646b6e",
+    "jarFileModificationDate": "2016-06-10T21:51:48.738+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\apache\\httpcomponents\\httpcore\\4.3.2\\httpcore-4.3.2.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.commons.compress",
+    "version": {
+      "major": 1,
+      "minor": 8,
+      "micro": 1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a698750c16740fd5b3871425f4cb3bbaa87f529d",
+    "jarFileModificationDate": "2016-06-10T21:51:49.098+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\org\\apache\\commons\\commons-compress\\1.8.1\\commons-compress-1.8.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "vecmath-1.3.1",
+    "version": {
+      "major": -1,
+      "minor": -1,
+      "micro": -1,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "a0ae4f51da409fa0c20fa0ca59e6bbc9413ae71d",
+    "jarFileModificationDate": "2016-06-10T21:51:48.701+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\java3d\\vecmath\\1.3.1\\vecmath-1.3.1.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "org.apache.logging.log4j-core",
+    "version": {
+      "major": 2,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": "beta9"
+    },
+    "jarFileFingerprint": "678861ba1b2e1fccb594bb0ca03114bb05da9695",
+    "jarFileModificationDate": "2016-06-10T21:51:48.632+02:00",
+    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\jars\\libraries\\org\\apache\\logging\\log4j\\log4j-core\\2.0-beta9\\log4j-core-2.0-beta9.jar",
+    "javaRuntime": false
+  },
+  {
+    "symbolicName": "com.paulscode.soundsystem",
+    "version": {
+      "major": 20120107,
+      "minor": 0,
+      "micro": 0,
+      "qualifier": ""
+    },
+    "jarFileFingerprint": "419c05fe9be71f792b2d76cfc9b67f1ed0fec7f6",
+    "jarFileModificationDate": "2016-06-10T21:51:48.900+02:00",
+    "location": "C:\\Game\\Game\\jars\\libraries\\com\\paulscode\\soundsystem\\20120107\\soundsystem-20120107.jar",
+    "javaRuntime": false
+  }
+]

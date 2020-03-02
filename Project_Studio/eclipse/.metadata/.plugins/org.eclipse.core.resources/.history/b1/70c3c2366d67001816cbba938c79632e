@@ -1,0 +1,132 @@
+package nl.thestructureworld.client.renderer.entity;
+ 
+import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.shaders.Light;
+import nl.thestructureworld.client.shaders.StaticShader;
+import nl.thestructureworld.client.shaders.tutmaydelete.Matrix;
+import nl.thestructureworld.client.shaders.tutmaydelete.RawModel;
+import nl.thestructureworld.entity.EntityLivingBase;
+
+import org.lwjgl.opengl.ARBMultitexture;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+import org.newdawn.slick.opengl.Texture;
+import org.newdawn.slick.opengl.TextureLoader;
+
+public class BasicEntityRenderer 
+{
+	private StaticShader shader = EntityRenderer.shader;
+	public Matrix4f projectionMatrix = new Matrix4f();
+	public static List<ArrayListEntity> entityRenderList = new ArrayList<ArrayListEntity>();
+	public static List<ArrayListEntity> terrainRenderList = new ArrayList<ArrayListEntity>();
+	
+	public void animatePlant(int plantIdinList,float xRot,float yRot,float zRot)
+	{
+	if(this.entityRenderList.size()>plantIdinList)
+	{
+	if(xRot!=-1){this.entityRenderList.get(plantIdinList).entity.setRotX(xRot);}
+	if(yRot!=-1){this.entityRenderList.get(plantIdinList).entity.setRotY(yRot);}
+	if(zRot!=-1){this.entityRenderList.get(plantIdinList).entity.setRotZ(zRot);}
+	}}
+	
+    public BasicEntityRenderer() 
+    {
+    	float aspectRatio = nl.thestructureworld.client.renderer.EntityRenderer.Aspect;
+        float y_scale = (float) ((1f / Math.tan(Math.toRadians(nl.thestructureworld.client.renderer.EntityRenderer.FOV / 2f))) * aspectRatio);
+        float x_scale = y_scale / aspectRatio;
+        float frustum_length = nl.thestructureworld.client.renderer.EntityRenderer.zFar - nl.thestructureworld.client.renderer.EntityRenderer.zNear;
+        projectionMatrix.m00 = x_scale;
+        projectionMatrix.m11 = y_scale;
+        projectionMatrix.m22 = -((nl.thestructureworld.client.renderer.EntityRenderer.zFar + nl.thestructureworld.client.renderer.EntityRenderer.zNear) / frustum_length);
+        projectionMatrix.m23 = -1;
+        projectionMatrix.m32 = -((2 * nl.thestructureworld.client.renderer.EntityRenderer.zNear * nl.thestructureworld.client.renderer.EntityRenderer.zFar) / frustum_length);
+        projectionMatrix.m33 = 0;
+        shader.start();
+        shader.loadProjectionMatrix(projectionMatrix);
+        shader.stop();
+    }
+    
+    /**
+     * drawMode can be GL11.GL_TRIANGLES (4) or GL11.GL_QUAD (7)
+     * @param sun
+     * @param drawMode
+     * @param vec
+     */
+    public void renderBasicEntity(List<Light> light,int drawMode,Vector4f vec,int planeType,boolean i)
+    {
+        shader.start();
+        shader.loadSkyColor(EntityRenderer.skyColor,EntityRenderer.fogDensity,EntityRenderer.fogGradient); 
+        shader.loadLight(light);
+        if(vec != null)
+        {
+        shader.loadPlaneType(planeType);
+        shader.loadPlane(vec);
+        shader.loadInvertDot(i);
+        }
+        shader.loadViewMatrix();
+        for(int id = 0;id<entityRenderList.size();++id)
+        {
+        ModelBasic model = entityRenderList.get(id).entity.getModel();
+        BasicEntityRender en = entityRenderList.get(id).entity;
+        if(EntityRenderer.getObject>-1&&id==EntityRenderer.getObject)
+        {
+        en.setPosition(new Vector3f(EntityRenderer.mouseOverX,EntityRenderer.mouseOverY,EntityRenderer.mouseOverZ));
+        }
+        if(!model.hasNormals)
+    	{
+        entityRenderList.get(id).entity.updateRenderer();
+        RawModel rawModel = model.getRawModel();
+        if(model.transp)
+        {
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        }
+        shader.loadFakeLightning(model.fakeLightning);
+        shader.loadShineVariables(model.shineDamper, model.reflectivity);
+        shader.loadDontDropBelow(model.dontDropBelow);
+        GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D,model.textureID);
+        Matrix4f transformationMatrix = Matrix.createTransformationMatrix(en.getPosition(),en.getRotX(), en.getRotY(), en.getRotZ(), en.getScale());
+        shader.loadTransformationVec3(transformationMatrix);
+        GL11.glCallList(entityRenderList.get(id).entity.getModel().glListID);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glCullFace(GL11.GL_BACK);	
+        }}
+        shader.stop();
+    }
+    
+    
+    
+    public void addTerrain(BasicEntityRender entity)
+    {
+    	terrainRenderList.add(new ArrayListEntity(entity));
+    }
+    
+    public void addEntity(BasicEntityRender entity)
+    {
+    	entityRenderList.add(new ArrayListEntity(entity));
+    }
+    
+    public class ArrayListEntity
+    {
+    	public BasicEntityRender entity;
+
+    	public ArrayListEntity(BasicEntityRender entity)
+    	{
+    		this.entity = entity;
+    	}
+    }
+    
+}

@@ -1,0 +1,436 @@
+package game.bionicles.bohrak;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+
+import nl.miystengine.client.FileBasicJava;
+import nl.miystengine.client.MiystEngine;
+import nl.miystengine.client.renderer.EntityRenderer;
+import nl.miystengine.client.renderer.basicmodels.ArrayListOBJModels;
+import nl.miystengine.client.renderer.entity.BasicEntityRender;
+import nl.miystengine.client.renderer.entity.Collision;
+import nl.miystengine.client.renderer.entity.EntitySmokeParticle;
+import nl.miystengine.client.renderer.entity.ModelBasic;
+import nl.miystengine.client.renderer.terrain.Terrain;
+import nl.miystengine.client.shaders.Camera;
+import nl.miystengine.client.shaders.normal.NormalMappingShader;
+import nl.miystengine.entity.EntityPlayer;
+ 
+public class Lehvak_Claw extends BasicEntityRender
+{	 
+	//Claw Textures
+	private int normals;
+	private int full;
+	private int lowT;
+	//Hand Textures
+	private int full_Hand;
+	private int low_Hand;
+	//Arm Textures
+	private int full_arm;
+	private int low_arm;
+	//Body and cogwheel textures
+	private int full_body;
+	private int low_body;
+	//Fot Texture
+	private int full_foot;
+	private int low_foot;
+	//Models
+	private int HighModel;
+	private int HighModelU;
+	private int HighModelP;
+	
+	private int HighModelArm;
+	private int HighModelJoint;
+	
+	private int HighModelHand;
+	
+	private int HighModelBody;
+	//Model gears
+	private int HighModelCogwheel;
+	private int HighModelRoundwheel;
+	//Model Foot
+	private int  HighModelFoot;
+	
+
+	public Lehvak_Claw(String texture,String modelID,float[] position, float rotX, float rotY, float rotZ,float scale) 
+    {
+		super(new ModelBasic(false,0,10,2,2,"",new Vector4f(1F,2.5F,0F,0F),modelID,true,false),position,rotX,rotY,rotZ,0F,scale);
+		
+		this.HighModelHand = getModelID("Bohrak"  + "_Hand");
+		this.HighModelJoint = getModelID("Bohrak"  + "_StickJoint");
+		this.HighModelArm = getModelID("Bohrak"  + "_Arm");
+		this.HighModelU = getModelID(modelID  + "_Claw_Under");
+		this.HighModelP = getModelID(modelID  + "_Claw_Piston");
+		this.HighModel = getModelID(modelID  + "_Claw_Base");
+		this.HighModelBody = getModelID(modelID  + "_Torso");
+		
+		this.HighModelCogwheel = getModelID("Cogwheel");
+		this.HighModelRoundwheel = getModelID("RoundCogwheel");
+		
+		//this.HighModelFoot = getModelID("_Foot");
+		
+        //End
+        this.full = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Lehvak_Claw.png");
+        this.lowT = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Lehvak_Claw_Low.png");
+        
+        this.full_arm = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Lehvak_Arm.png");
+        this.low_arm = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Lehvak_Arm_Low.png");
+        
+        this.full_Hand = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/Bohrak_Hands.png");
+        this.low_Hand = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/Bohrak_Hands_Low.png");
+        
+        this.full_body = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Body_and_Cog.png");
+        this.low_body = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Body_and_Cog_Low.png");
+        
+        this.full_foot = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Foot.png");
+        this.low_foot = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/bohrak/lehvak/Bohrak_Foot_Low.png");
+    
+        this.normals = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/No NormalMap.png");
+        
+        this.materialType = 3;
+		this.textureCoords = new float[]{1,1,1,1};
+		this.rotX = rotX;
+        this.rotY = rotY;
+        this.rotZ = rotZ;
+        this.scale = scale;
+        this.col = new Collision(1, 2.5F, 2.5F, this.position);
+        this.matrixModel = new Matrix4f();
+        
+   }
+	
+	private int id;
+	
+	/**
+	 * Load the Model and look for the modelID
+	 * @param modelPath
+	 * @return id of the model
+	 */
+	public int getModelID(String modelPath)
+	{
+		EntityRenderer.OBJModelList.add(new ArrayListOBJModels(modelPath));
+		for(int i = 0;i < EntityRenderer.OBJModelList.size();++i)
+	    {
+			if(EntityRenderer.OBJModelList.get(i).nameOBJ.contains(modelPath))
+	        {
+	        	id = EntityRenderer.OBJModelList.get(i).idModel;
+	        	break;
+	        }
+	    }
+		return id;
+	}
+   
+	private int spawnSmoke = 0;
+	private float LODDistance;
+	
+	public void updateRenderFPS()
+    {
+		super.updateRenderFPS();
+		
+		if(this.spawnSmoke == 0)
+		{
+			//EntityRenderer.nmr.spawnEntity(new EntitySmokeParticle(-0.5F,true,1F,false,"smoke/smoke_" + MiystEngine.miystengine.rand.nextInt(4), 2F,2F,"plane",new float[]{1,1,0,0},
+			//new float[]{this.position.x + 0.5F + ((MiystEngine.miystengine.rand.nextInt(10) - MiystEngine.miystengine.rand.nextInt(10)) / 10F),this.position.y,this.position.z + 0.5F + ((MiystEngine.miystengine.rand.nextInt(10) - MiystEngine.miystengine.rand.nextInt(10)) / 10F)},0.2F,0,0,0, 0.8F));  
+			this.spawnSmoke = 350;
+		}
+		
+		Vector3f pos = MiystEngine.miystengine.entityRenderer.picker().getCurrentTerrainPoint();
+	
+		if(this.spawnSmoke > 0)
+		{
+			--this.spawnSmoke;
+		}
+    }
+	
+	@Override
+	public void updateRenderer()
+    {
+		if(!this.rotateBack)
+		{
+			for(int i = 0;i < 10;++i)
+			{
+				this.rotateClaw += 0.1F;
+			}
+		}
+		
+		if(this.rotateClaw > 5F && !this.rotateBack)
+		{
+			this.rotateBack = true;
+		}
+		
+		if(this.rotateBack)
+		{
+			for(int i = 0;i < 10;++i)
+			{
+				this.rotateClaw -= 0.1F;
+			}
+		}
+		if(this.rotateClaw < -45F && this.rotateBack)
+		{
+			this.rotateBack = false;
+		}
+    }
+		
+	private Matrix4f matrixModel;
+	
+	/**
+	 * Set a new position, rotation and scale to the existing Matrix
+	 * @param addPositon
+	 * @param addRotation
+	 */
+	private void setBoneRotationAndScale(Vector3f addPositon,Vector3f addRotation,Vector3f scale)
+	{
+		this.matrixModel = MiystEngine.miystengine.entityRenderer.camera.createTransformationMatrix(this.matrixModel,new Vector3f(addPositon.x,addPositon.y,addPositon.z),this.getRotX() + addRotation.x,this.getRotY() + addRotation.y, this.getRotZ() + addRotation.z, new Vector3f(scale.x,scale.y,scale.z));
+	}
+	
+	/**
+	 * Set a new position, rotation and scale to the existing Matrix
+	 * @param addPositon
+	 * @param addRotation
+	 */
+	private void setBoneRotation(Vector3f addPositon,Vector3f addRotation)
+	{
+		this.matrixModel = MiystEngine.miystengine.entityRenderer.camera.createTransformationMatrix(this.matrixModel,new Vector3f(addPositon.x,addPositon.y,addPositon.z),this.getRotX() + addRotation.x,this.getRotY() + addRotation.y, this.getRotZ() + addRotation.z, new Vector3f(1,1,1));
+	}
+	
+	/**
+	 * Send the Matrix to the shader
+	 * @param shader
+	 */
+	private void addoneRotation(NormalMappingShader shader)
+	{
+		shader.loadTransformationMatrix(this.matrixModel);	
+	}
+	
+	/**
+	 * Recreate the Matrix for new model pieces
+	 * @param shader
+	 * @param addPositon
+	 * @param addRotation
+	 */
+	private void resetSetBoneRotation(NormalMappingShader shader,Vector3f addPositon,Vector3f addRotation)
+	{
+		MiystEngine.miystengine.entityRenderer.camera.createNew(this.matrixModel);
+	}
+	
+	private float rotateClaw = 0F;
+	private boolean rotateBack = false;
+	//Remove later
+	private float xx = 0;
+	private float yy = 0;
+	private float zz = 0;
+	//End
+	//Add Rotation for Hand 1
+	private float handX,handY,handZ;
+	private float armLowerX,armLowerY,armLowerZ;
+	private float armX,armY,armZ;
+	//Add Rotation for Hand 2
+	private float handX2,handY2,handZ2;
+	private float armLowerX2,armLowerY2,armLowerZ2;
+	private float armX2,armY2,armZ2;
+	//Add Rotation body
+	private float bodyX,bodyY,bodyZ;
+	
+	 public boolean renderModel(NormalMappingShader shader)
+	 {		
+		 	super.renderModel(shader);
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_T))
+			{
+				this.xx += 0.01F;
+			}
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_G))
+			{
+				this.xx -= 0.01F;
+			}
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_Y))
+			{
+				this.yy += 0.01F;
+			}
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_H))
+			{
+				this.yy -= 0.01F;
+			}
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_U))
+			{
+				this.zz += 0.01F;
+			}
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_J))
+			{
+				this.zz -= 0.01F;
+			}
+		 	if(Keyboard.isKeyDown(Keyboard.KEY_P))
+			{
+				System.out.println(xx + ":" + yy + ":" + zz);
+			}
+/////////////////////////////////////////////////////////////////////////////////////////////// 	
+		 	float armHeight = 1F;
+		 	this.LODDistance = Vector3f.sub(new Vector3f(Camera.camX,Camera.camY,Camera.camZ), this.position, null).lengthSquared();
+		    GL11.glDisable(GL11.GL_BLEND);
+		 	EntityPlayer player = MiystEngine.miystengine.thePlayer;
+///////////////////////////////////////////////////////////////////////////////////////////////
+			GL13.glActiveTexture(GL13.GL_TEXTURE12);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D,this.normals);
+		 	
+			this.renderTextures(this.full_foot, this.low_foot);
+			
+			MiystEngine.miystengine.entityRenderer.camera.createNew(this.matrixModel);	
+		 	//First Hand Piece
+		 	this.setBoneRotationAndScale(new Vector3f(this.position.x,this.position.y,this.position.z), new Vector3f(bodyX,bodyY,bodyZ),new Vector3f(0.25F,0.25F,0.25F));
+		 	this.addoneRotation(shader);
+		 	this.renderTextures(this.full_body, this.low_body);
+		 	//Wheel
+		 	//Inside
+			
+		 	this.createCogwheel(shader,this.HighModelRoundwheel,new Vector3f(0F,-0.1F,-0.7F),0.5F);
+		 	
+		 	this.createCogwheel(shader,this.HighModelRoundwheel,new Vector3f(0F,-0.11F,-3.2F),0.5F);
+		 	this.createCogwheel(shader,this.HighModelRoundwheel,new Vector3f(0F,2.6F,-1F),0.5F);
+		 	
+			this.createCogwheel(shader,this.HighModelRoundwheel,new Vector3f(0F,2.7F,-3F),0.5F);
+			 
+		 	//
+		 	
+		 	
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(0F,1.9F,-4.5F),1F);
+		 	
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(1F,1.22F,-2.1F),1F);
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(-1F,1.22F,-2.1F),1F);
+		 	
+			
+		 	//Arm Cogwheel
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(0.5F,1F,0.82F),0.5F);
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(-0.5F,1F,0.82F),0.5F);
+		 	//Leg Cogwheel
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(0.5F,0.22F,-0.02F),0.5F);
+		 	this.createCogwheel(shader,this.HighModelCogwheel,new Vector3f(-0.5F,0.22F,-0.02F),0.5F);
+		 	//Body
+			this.addoneRotation(shader);
+			GL11.glCallList(this.HighModelBody);
+			//Render Arms
+			this.createArm(shader, true,new Vector3f(-0.6F,0.2F,0.2F),new Vector3f(handX,handY,handZ),new Vector3f(armLowerX,armLowerY,armLowerZ),new Vector3f(armX,armY,armZ));
+			
+			this.createArm(shader, false,new Vector3f(0.6F,0.2F,0.2F),new Vector3f(handX2,handY2,handZ2),new Vector3f(armLowerX2,armLowerY2,armLowerZ2),new Vector3f(armX2,armY2,armZ2));
+		 	
+			
+			if(player.hasMoved && this.LODDistance < 1000F)
+			{
+				if(this.LODDistance < 8F)
+				{
+					this.renderLOD = true;
+				}
+				else
+				{
+					this.renderLOD = false;
+				}
+			}
+			return true;
+	 }
+	 
+
+	 
+	 private void createCogwheel(NormalMappingShader shader,int cogType,Vector3f position, float scale)
+	 {
+			this.setBoneRotationAndScale(new Vector3f(position.x,position.y,position.z), new Vector3f(0,0,0),new Vector3f(scale,scale,scale));
+		 	this.addoneRotation(shader);
+		 	GL11.glCallList(cogType);
+		 	float reverseScale;
+		 	if(scale < 1F)
+		 	{
+		 		reverseScale = (scale * (1F / scale)) + 1F;
+		 	}
+		 	else
+		 	{
+		 		reverseScale = 1F;
+		 	}
+		 	this.setBoneRotationAndScale(new Vector3f(0,0,0), new Vector3f(0,0,0),new Vector3f(reverseScale,reverseScale,reverseScale));
+			this.setBoneRotationAndScale(new Vector3f(-position.x,-position.y,-position.z), new Vector3f(0,0,0),new Vector3f(1F,1F,1F));
+	 }
+	 
+	 private void createArm(NormalMappingShader shader, boolean mirror,Vector3f position,Vector3f hand,Vector3f armlower,Vector3f arm)
+	 {
+		 float scale;
+		 if(mirror)
+		 {
+			 scale = -0.25F;
+		 }
+		 else
+		 {
+			 scale = 0.25F;
+		 }
+		//Arm	
+		 	//First Hand Piece
+		 	MiystEngine.miystengine.entityRenderer.camera.createNew(this.matrixModel);
+			this.setBoneRotationAndScale(new Vector3f(this.position.x,this.position.y,this.position.z), new Vector3f(bodyX,bodyY,bodyZ),new Vector3f(1,1,1));	
+		 	this.setBoneRotationAndScale(new Vector3f(position.x,position.y,position.z), new Vector3f(arm.x,180F + arm.y,arm.z),new Vector3f(scale,0.25F,0.25F));
+		 	this.renderTextures(this.full_Hand, this.low_Hand);
+		 	this.addoneRotation(shader);
+		 	GL11.glCallList(this.HighModelHand);
+		 	this.setBoneRotation(new Vector3f(0,0,0), new Vector3f(0,-180F,0));
+		 	this.setBoneRotation(new Vector3f(3.28F,0.88F,-3.1F), new Vector3f(0,0,0));
+		 	//First Stick and Ball
+		 	this.setBoneRotation(new Vector3f(-1.4F,0,3.3F), new Vector3f(0,90F,0));
+		 	this.renderTextures(this.full_arm, this.low_arm);
+		 	this.addoneRotation(shader);
+		 	GL11.glCallList(this.HighModelJoint);
+		 	this.setBoneRotation(new Vector3f(0,0,0), new Vector3f(0,-90F,0));
+		 	this.setBoneRotation(new Vector3f(1.4F,0,-3.3F), new Vector3f(0,0,0));
+		 	//End
+		 	//Arm Piece
+		 	this.setBoneRotation(new Vector3f(0,0,1.9F), new Vector3f(0,0,0));
+		 	this.addoneRotation(shader);
+		 	GL11.glCallList(this.HighModelArm);
+		 	this.setBoneRotation(new Vector3f(0,0,-1.9F), new Vector3f(0,0,0));
+		 	//End
+		 	//Stick and Ball
+		 	this.setBoneRotation(new Vector3f(-0.16F,0.24F,+ 2F), new Vector3f(armlower.x,armlower.y,armlower.z));
+		 	this.addoneRotation(shader);
+		 	GL11.glCallList(this.HighModelJoint);
+		 	this.setBoneRotation(new Vector3f(0.16F,-0.24F,-2F), new Vector3f(0,0,0));
+		 	//End	
+		 	//Hand Piece
+		 	this.setBoneRotation(new Vector3f(0.27F,0.24F,-0.49F), new Vector3f(90F + hand.x,hand.y,hand.z));
+		 	this.renderTextures(this.full_Hand, this.low_Hand);
+		 	this.addoneRotation(shader);
+		 	GL11.glCallList(this.HighModelHand);
+		 	this.setBoneRotation(new Vector3f(0,0,0), new Vector3f(-90F,0,0));
+		 	this.setBoneRotation(new Vector3f(-0.27F,-0.24F,0.49F), new Vector3f(0F,0,0));		 	
+	 	//End
+		//Claw
+		 	this.renderTextures(this.full, this.lowT);
+			//Rotate Hand and Claw complete
+			this.setBoneRotation(new Vector3f(0,1F,0), new Vector3f(0,0,0));
+			this.addoneRotation(shader);
+			GL11.glCallList(this.HighModel);
+			//Render the small claw part
+			this.setBoneRotation(new Vector3f(-0.44F,0,-0.69F), new Vector3f(0,rotateClaw,0));
+			this.addoneRotation(shader);
+			GL11.glCallList(this.HighModelU);
+			//Render the piston
+			this.setBoneRotation(new Vector3f(0,0,0), new Vector3f(0,-rotateClaw,0));
+			this.setBoneRotation(new Vector3f(0.44F + -0.64F,0,0.69F), new Vector3f(0,rotateClaw * 0.65F,0));
+			this.addoneRotation(shader);
+			GL11.glCallList(this.HighModelP);	
+		//End
+	 }
+	 
+	 private void renderTextures(int fullTexture,int lowTexture)
+	 {
+		 GL13.glActiveTexture(GL13.GL_TEXTURE13);
+		 if(this.renderLOD)
+		 {
+		 	GL11.glBindTexture(GL11.GL_TEXTURE_2D, fullTexture); 
+		 }
+		 else
+		 {
+		 	GL11.glBindTexture(GL11.GL_TEXTURE_2D,lowTexture);
+		 }
+	 }
+	 
+	 
+	 	
+	 
+	 private boolean renderLOD = false;
+}

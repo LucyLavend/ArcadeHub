@@ -1,0 +1,158 @@
+package nl.thestructureworld.client.shaders.sky;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import nl.thestructureworld.account.MouseControl;
+import nl.thestructureworld.client.FileBasicJava;
+import nl.thestructureworld.client.Main;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.gui.IngameGui;
+import nl.thestructureworld.client.gui.IngameMenuAndOptionsGui;
+import nl.thestructureworld.client.renderer.ArrayListGLListObjects;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.renderer.entity.ArrayListEntity;
+import nl.thestructureworld.client.renderer.entity.BasicEntityRender;
+import nl.thestructureworld.client.renderer.entity.ModelBasic;
+import nl.thestructureworld.client.renderer.terrain.RenderTerrain;
+import nl.thestructureworld.client.renderer.texture.TextureManager;
+import nl.thestructureworld.client.shaders.Light;
+import nl.thestructureworld.client.shaders.Matrix;
+import nl.thestructureworld.client.shaders.RawModel;
+import nl.thestructureworld.client.shaders.StaticShader;
+import nl.thestructureworld.client.shaders.normal.NormalMappingShader;
+import nl.thestructureworld.entity.EntityLivingBase;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.EXTTextureFilterAnisotropic;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GLContext;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+import org.lwjgl.util.vector.Vector4f;
+
+public class SkyRenderer extends StaticShader
+{
+	public SkyShader shader;
+	public static BasicEntityRender renderEntity = new SkyBoxRenderer(new ModelBasic(2,new RenderTerrain().skybox(),10,0F,0F, "/objectsandterrain/sky/skybox",new Vector4f(0,0,0,0),102,false,false),new float[]{0,0},0,0,0,0,1F);
+	public Matrix4f projectionMatrix = new Matrix4f();
+	public int mountains = TheStructureWorld.TheStructureWorld.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/sky/mountains_skybox.png");
+	public int stars = TheStructureWorld.TheStructureWorld.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/sky/skybox_night.png");
+	public int clouds = TheStructureWorld.TheStructureWorld.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/sky/clouds_skybox_1.png");
+	public int clouds2 = TheStructureWorld.TheStructureWorld.getTextureManager().loadTexture2(FileBasicJava.source+"/The Structure World/objectsandterrain/sky/clouds_skybox_2.png");
+	public float rotateClouds = 0;
+	protected RawModel sun = new RenderTerrain().sun();
+	protected RawModel moon = new RenderTerrain().moon();
+
+	
+	public SkyRenderer(Matrix4f projectionMatrix) 
+	{	
+		this.shader = new SkyShader();
+		shader.start();
+		shader.loadProjectionMatrix(projectionMatrix);
+		shader.connectTextureUnits();
+		shader.stop();
+	}
+	
+ 	public float cloudWeather = 10F;
+ 	public float cloudsky = 0F;
+ 	public float cloudWeatherOld = 10F;
+ 	public float cloudskyOld = 0F;
+ 
+	 public void render(List<Light> lights) 
+	 {			
+		 		this.rotateClouds+=0.0001F*TheStructureWorld.TheStructureWorld.thePlayer.worldObj.WindStrengh;
+		 	    EntityLivingBase base = TheStructureWorld.TheStructureWorld.thePlayer; 
+		 		viewMatrix = Matrix.createViewMatrix();
+				shader.start();	
+				shader.addCloud(10F,10F);
+				GL11.glEnable(GL11.GL_BLEND);
+		        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);	
+		        shader.loadSkyColor(EntityRenderer.skyColor,EntityRenderer.fogDensity,EntityRenderer.fogGradient);
+				shader.loadViewMatrix(viewMatrix);
+				shader.loadLights(lights, viewMatrix);
+				ModelBasic model = renderEntity.getModel();
+				renderEntity.updateRenderer();
+				shader.loadOffset(renderEntity.textureCoords[0],renderEntity.textureCoords[1],renderEntity.textureCoords[2],renderEntity.textureCoords[3]);
+				
+				shader.loadSkyColor(EntityRenderer.skyColor, EntityRenderer.fogDensity, EntityRenderer.fogGradient);
+				GL13.glActiveTexture(GL13.GL_TEXTURE1);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,stars);
+				GL13.glActiveTexture(GL13.GL_TEXTURE0);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,renderEntity.getModel().textureIDModel512x);
+				float sunmoonTime = ((60*(IngameGui.Hours+6))+IngameGui.minutes);
+				
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,renderEntity.getModel().textureIDModel512x);
+				shader.addLight(0F);
+				shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f((float)base.posX,150-30,(float)base.posZ),0,0,0,0,1.1F));	
+				GL30.glBindVertexArray(model.getRawModel().getVaoID());
+				GL20.glEnableVertexAttribArray(0);
+				GL20.glEnableVertexAttribArray(1);
+				GL20.glEnableVertexAttribArray(2);
+				GL11.glDrawElements(GL11.GL_TRIANGLES,model.getRawModel().getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+				GL20.glDisableVertexAttribArray(0);
+				GL20.glDisableVertexAttribArray(1);
+				GL20.glDisableVertexAttribArray(2);
+				GL30.glBindVertexArray(0);
+				shader.addLight(1);
+				shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f((float)base.posX,150,(float)base.posZ),0,360*(sunmoonTime*0.00069F),0,0,1F));
+				GL30.glBindVertexArray(sun.getVaoID());
+				GL20.glEnableVertexAttribArray(0);
+				GL20.glEnableVertexAttribArray(1);
+				GL20.glEnableVertexAttribArray(2);
+				GL11.glDrawElements(GL11.GL_TRIANGLES,sun.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+				GL20.glDisableVertexAttribArray(0);
+				GL20.glDisableVertexAttribArray(1);
+				GL20.glDisableVertexAttribArray(2);
+				GL30.glBindVertexArray(0);	
+				shader.addLight(2);
+				shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f((float)base.posX,150,(float)base.posZ),0,360*((sunmoonTime+(12*60))*0.00069F),0,0,1F));
+				GL30.glBindVertexArray(moon.getVaoID());
+				GL20.glEnableVertexAttribArray(0);
+				GL20.glEnableVertexAttribArray(1);
+				GL20.glEnableVertexAttribArray(2);
+				GL11.glDrawElements(GL11.GL_TRIANGLES,moon.getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+				GL20.glDisableVertexAttribArray(0);
+				GL20.glDisableVertexAttribArray(1);
+				GL20.glDisableVertexAttribArray(2);
+				GL30.glBindVertexArray(0);		
+
+				GL13.glActiveTexture(GL13.GL_TEXTURE2);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,clouds2);
+				GL13.glActiveTexture(GL13.GL_TEXTURE1);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,clouds);
+				GL13.glActiveTexture(GL13.GL_TEXTURE0);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,renderEntity.getModel().textureIDModel512x);
+				shader.addLight(4F);
+				shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f((float)base.posX,150-30,(float)base.posZ),0,0,this.rotateClouds,0,1F));	
+				GL30.glBindVertexArray(model.getRawModel().getVaoID());
+				GL20.glEnableVertexAttribArray(0);
+				GL20.glEnableVertexAttribArray(1);
+				GL20.glEnableVertexAttribArray(2);
+				GL11.glDrawElements(GL11.GL_TRIANGLES,model.getRawModel().getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+				GL20.glDisableVertexAttribArray(0);
+				GL20.glDisableVertexAttribArray(1);
+				GL20.glDisableVertexAttribArray(2);
+				GL30.glBindVertexArray(0);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D,mountains);
+				shader.addLight(3F);
+				shader.loadTransformationMatrix(Matrix.createTransformationMatrix(new Vector3f((float)base.posX,150-30,(float)base.posZ),0,0,0,0,1.1F));	
+				GL30.glBindVertexArray(model.getRawModel().getVaoID());
+				GL20.glEnableVertexAttribArray(0);
+				GL20.glEnableVertexAttribArray(1);
+				GL20.glEnableVertexAttribArray(2);
+				GL11.glDrawElements(GL11.GL_TRIANGLES,model.getRawModel().getVertexCount(), GL11.GL_UNSIGNED_INT, 0);
+				GL20.glDisableVertexAttribArray(0);
+				GL20.glDisableVertexAttribArray(1);
+				GL20.glDisableVertexAttribArray(2);
+				GL30.glBindVertexArray(0);
+				shader.stop();
+		}
+	
+	 
+}

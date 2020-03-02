@@ -1,0 +1,125 @@
+package nl.thestructureworld.client.renderer.entity;
+ 
+import java.util.Random;
+
+import nl.thestructureworld.account.GameProfile;
+import nl.thestructureworld.client.TheStructureWorld;
+import nl.thestructureworld.client.renderer.EntityRenderer;
+import nl.thestructureworld.client.shaders.normal.NormalMappingShader;
+
+import org.lwjgl.util.vector.Vector3f;
+ 
+public class BasicEntityRender
+{
+    protected ModelBasic model;
+    public Vector3f position;
+    public float rotX,rotY,rotZ,reflecY,modelY,x,y,z;
+    protected float scale;
+    private int textureIndex = 0;
+    public Random rand = new Random();
+    public boolean deleteMe = false;
+    public int hasNormals;
+    public float coordCode = -666666;
+    public float[] textureCoords = new float[]{1,1,0,0};
+    public int textureType;
+    public boolean reCreateModel = false;
+    public float ObjectDistance = 0F;
+	
+    public BasicEntityRender(ModelBasic model, float[] position,float reflecY, float rotX, float rotY, float rotZ,float scale) 
+    {
+    	this.model = model;
+    	this.position = new Vector3f(position[0],EntityRenderer.terrain.returnHeight((int)position[0],(int)position[1]),position[1]);  
+        this.rotX = rotX;
+        this.rotY = rotY;
+        this.rotZ = rotZ;
+        this.reflecY = reflecY;
+        this.scale = scale;
+        this.hasNormals = model.hasNormals;
+    }
+    
+    public BasicEntityRender(float fixModelY,ModelBasic model, float[] position,float reflecY, float rotX, float rotY, float rotZ,float scale) 
+    {
+        this.model = model;
+        this.position = new Vector3f(position[0],EntityRenderer.terrain.returnHeight((int)position[0],(int)position[1]),position[1]);
+        this.rotX = rotX;
+        this.rotY = rotY;
+        this.rotZ = rotZ;
+        this.reflecY = reflecY;
+        this.modelY = fixModelY;
+        this.scale = scale;
+        this.hasNormals = model.hasNormals;
+    }
+    
+    public boolean renderModel(NormalMappingShader shader){return false;}
+ 
+    public void updateRenderer()
+    {
+    		if(this.coordCode == -666666){this.coordCode=(float)(this.position.x+this.position.z+this.position.y);}
+    		
+    		float distance = (TheStructureWorld.TheStructureWorld.thePlayer.coordCode-this.coordCode)/2.5F;
+    		if(distance < 10F)
+    		{
+    		this.ObjectDistance = 1F-(distance/10F);
+    		}
+    		
+    		if(TheStructureWorld.TheStructureWorld.thePlayer.coordCode < this.coordCode+EntityRenderer.NormalrenderDistance && TheStructureWorld.TheStructureWorld.thePlayer.coordCode > this.coordCode-EntityRenderer.NormalrenderDistance)
+    		{
+    		this.hasNormals = 0;
+        	this.textureType=0;
+    		}
+    		else if(TheStructureWorld.TheStructureWorld.thePlayer.coordCode < this.coordCode+3+(EntityRenderer.NormalrenderDistance*3F) && TheStructureWorld.TheStructureWorld.thePlayer.coordCode > this.coordCode-(EntityRenderer.NormalrenderDistance*3F))
+    		{
+    		this.hasNormals = 0;
+    		this.textureType=1;
+    		}
+    		else if(TheStructureWorld.TheStructureWorld.thePlayer.coordCode < this.coordCode+3+(EntityRenderer.NormalrenderDistance*5F) && TheStructureWorld.TheStructureWorld.thePlayer.coordCode > this.coordCode-(EntityRenderer.NormalrenderDistance*5F))
+    		{
+    		this.hasNormals = 1;
+    		this.textureType=2;
+    		}
+    		else if(TheStructureWorld.TheStructureWorld.thePlayer.coordCode < this.coordCode+3+(EntityRenderer.NormalrenderDistance*8F) && TheStructureWorld.TheStructureWorld.thePlayer.coordCode > this.coordCode-(EntityRenderer.NormalrenderDistance*8F))
+    		{
+    		this.textureType=3;
+    		}
+    		else 
+    		{
+    		this.textureType=4;
+    		this.deleteMe = true;
+    		}
+    }
+ 
+    public void increasePosition(float dx, float dy, float dz){this.position.x+=dx;this.position.y+=dy;this.position.z+=dz;}
+    
+    public void setY(float yy){this.position.y=yy;}
+ 
+    public void increaseRotation(float dx, float dy, float dz){this.rotX+=dx;this.rotY+=dy;this.rotZ+=dz;}
+    
+    public float getTextureXOffset(){return textureIndex;}
+	
+	public float getTextureYOffset(){return textureIndex;}
+ 
+    public ModelBasic getModel(){return model;}
+ 
+    public void setModel(ModelBasic model){this.model=model;}
+ 
+    public Vector3f getPosition(){return position;}
+ 
+    public void setPosition(Vector3f position){this.position=position;}
+ 
+    public float getRotX(){return rotX;}
+ 
+    public void setRotX(float rotX){this.rotX=rotX;}
+ 
+    public float getRotY(){return rotY;}
+ 
+    public void setRotY(float rotY){this.rotY = rotY;}
+ 
+    public float getRotZ(){return rotZ;}
+ 
+    public void setRotZ(float rotZ){this.rotZ = rotZ;}
+ 
+    public float getScale(){return scale;}
+ 
+    public void setScale(float scale){this.scale=scale;}
+ 
+}

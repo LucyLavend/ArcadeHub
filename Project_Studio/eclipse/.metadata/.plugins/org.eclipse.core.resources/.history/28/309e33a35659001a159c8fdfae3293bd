@@ -1,0 +1,645 @@
+package nl.miystengine.world;
+
+import java.io.File;
+import java.util.List;
+import java.util.concurrent.Callable;
+import nl.miystengine.client.FileBasicJava;
+import nl.miystengine.client.MiystEngine;
+import nl.miystengine.client.audio.AudioMaster;
+import nl.miystengine.client.audio.Source;
+import nl.miystengine.client.gui.IngameGui;
+import nl.miystengine.client.gui.LoadingScreenGui;
+import nl.miystengine.client.gui.ScreenEffects;
+import nl.miystengine.client.gui.IngameMenuAndOptionsGui;
+import nl.miystengine.client.renderer.EntityRenderer;
+import nl.miystengine.client.renderer.terrain.TerrainRenderer;
+import nl.miystengine.server.management.MiystEngineServer;
+import nl.miystengine.world.SettingsOfStructureWorld.GameType;
+
+public class StructureWorldInfo
+{
+   /**
+	* 11-3-2018 No edit needed.
+	* 20-6-2018 Folder Name getter, setter and private String
+	* 2-9-2018 Moved Clouds(Weather) From World to this File(But no rain yet)
+	* 3-9-2018 Clouds Animation and saving done.
+	* Future: Add Weather(Contains tsw_gen_functionition that updates the world so can be used for spawning creatures, change weather etc.)
+	* 11-09-2018 Removed Crashreport import, new system being made!
+	* 9/10/11-11-2018 Edit Fog Distance
+	* 16/11/2018 Stop Time in World with Keycombination
+	* 10/03/2019 Save player Health
+	* 2-8-2019 Add Snow storm sound effects, only one can play
+	* 17-8-2019 18- New save system
+	* 22-8-2019 edit new save system
+	* 04-9-2019 removed old save system
+	* 30-09-2019 Added Water tides
+	* 24-10-2019 Remove fog change
+	* 10-11-2019 Added forward time(makes time go faster or slower)
+	*/
+	public int loadorwrite = 0;
+    private String generatorOptions = "basic";
+    public float spawnX;
+    public float spawnY;
+    public float spawnZ;
+    
+    public int playerX;
+    public int playerY;
+    public int playerZ;
+    
+    private long totalTime;
+    private int worldTime;
+    private long lastTimePlayed;
+    private long sizeOnDisk;
+    public String levelName;
+    private int saveVersion;
+    public SettingsOfStructureWorld.GameType theGameType = GameType.NOT_SET;
+    public String difficulty = "0";
+    private boolean initialized;
+    public float gravity = 9.807F;
+    public float temperature = 25.0F;
+    public float fogDensity = 0.0F;
+    public int fungusGrowth = 0;
+    public int radiation = 0;
+    public SettingsOfStructureWorld settings;
+    public int Badlandspots = 5;
+    public float WorldFog = 0;
+    public boolean increaseFog = false;
+    public float setFogDensity = 0;
+    public String seed = "NOTSET";
+    private String folderName = "Test"; 
+    public float waterHeightFromTides = 3F;
+    public int WindStrengh = 5;
+    public boolean windUpdated = false;
+    public float cloudWeather = 10F;
+ 	public float cloudsky = 5F;
+ 	public int cloudWeatherOld = 10;
+ 	public int cloudskyOld = 5;
+ 	public boolean stopTime = false;
+ 	private boolean isRaining = false;
+ 	private int buffer = AudioMaster.loadSound(FileBasicJava.sources + "sound/Ambient/Snowstorm/Snowstorm_1.wav");
+ 	private Source source;
+	private String location;
+	public int timeSpeed = 5;
+ 	private static String worldSettingsLocation;
+ 	
+    public void updateWorld(World world)
+    {
+    	if(EntityRenderer.nmr != null)
+		{
+			EntityRenderer.nmr.updateWindEffect();
+		}
+    	
+    	if(seed.equals("NOTSET"))
+    	{
+    		if(this.generateSeed)
+    		{
+    			seed = "" + MiystEngine.miystengine.rand.nextInt(999999999);
+    			System.out.println("[Client] : MiystEngine.miystengine.random Generated Seed");
+    		}
+    	}
+    	
+    	if(!this.stopTime)
+    	{
+    		this.setWorldTime(this.getWorldTime() + timeSpeed);
+    	}
+    	
+    	int raining;
+    	if(this.temperature < 18)
+    	{
+    		raining = (int)(357 * (this.temperature / 3));
+    	}
+    	else if(this.temperature > 17 && this.temperature < 30)
+    	{
+    		raining = (int)(357 * this.temperature);
+    	}
+    	else
+    	{
+    		raining = (int)(357 / this.temperature);
+    	}
+    	
+    	int rainingFixed = raining;
+    	if(rainingFixed < 0)
+    	{
+    		rainingFixed = -rainingFixed;
+    	}
+    	
+    	if((LoadingScreenGui.guiLoaded > 190 && MiystEngine.miystengine.theWorld != null && MiystEngine.miystengine.rand.nextInt(2000) == 0) || (LoadingScreenGui.guiLoaded > 190 && source != null && !source.isPlaying() && MiystEngine.miystengine.rand.nextInt(2000) == 0))
+    	{
+    		source = new Source(false);
+	    	source.setPosition((float)MiystEngine.miystengine.thePlayer.posX,(float)MiystEngine.miystengine.thePlayer.posY,(float)MiystEngine.miystengine.thePlayer.posZ);
+	   	 	source.setVolume(3F);
+	   	 	source.playSound(buffer);
+    	}
+   	 
+    	if(rainingFixed > 0 && MiystEngine.miystengine.rand.nextInt(rainingFixed)==0)
+    	{
+    		if(this.isRaining)
+    		{
+    			this.isRaining = false;
+    		}
+    		else if(!this.isRaining)
+    		{
+    			this.isRaining = true;
+    		}
+    	}
+    	
+    	if(!this.isRaining && TerrainRenderer.basicGroundNormalMapShinyValues > 0.6)
+    	{
+    		TerrainRenderer.basicGroundNormalMapShinyValues -= 0.01;
+    	}
+    	else if(this.isRaining && TerrainRenderer.basicGroundNormalMapShinyValues < 1)
+    	{
+    		TerrainRenderer.basicGroundNormalMapShinyValues += 0.01;
+    	}
+        
+    	if(!this.isRaining && TerrainRenderer.stoneNormalMapShinyValues > 2)
+    	{
+    		TerrainRenderer.stoneNormalMapShinyValues -= 0.005;
+    	}
+    	else if(this.isRaining && TerrainRenderer.stoneNormalMapShinyValues < 4)
+    	{
+    		TerrainRenderer.stoneNormalMapShinyValues += 0.005;
+    	}
+    	
+        if(MiystEngine.miystengine.rand.nextInt(5)==0)
+    	{
+    		if(MiystEngine.miystengine.rand.nextInt(2)==0)
+        	{
+    			this.increaseFog = true;
+    		}
+    		else
+        	{
+    			this.increaseFog = false;
+    	  	}
+    		float canSetFog = MiystEngine.miystengine.rand.nextInt((int)(30-this.fogDensity)*100)/20000F;
+    		if(canSetFog < 0.002F && canSetFog > 0.0000001F)
+    		{
+    			this.setFogDensity = canSetFog;
+    		}
+    	}
+		
+		if(this.cloudWeatherOld < this.cloudWeather)
+		{
+			this.cloudWeather -= 0.00001F;
+		}
+		else if(this.cloudWeatherOld > this.cloudWeather)
+		{
+			this.cloudWeather += 0.00001F;
+		}
+		
+		if(this.cloudskyOld < this.cloudsky)
+		{
+			this.cloudsky -= 0.00001F;
+		}
+		else if(this.cloudskyOld > this.cloudsky)
+		{
+			this.cloudsky += 0.00001F;
+		}
+        
+        if(MiystEngine.miystengine.rand.nextInt(40) == 0)
+        {
+        	if(MiystEngine.miystengine.rand.nextInt(2) == 0 && this.WindStrengh<15)
+        	{
+        		this.WindStrengh += 1+MiystEngine.miystengine.rand.nextInt(1);
+        	}
+        	else if(this.WindStrengh>3)
+        	{
+        		this.WindStrengh -= 1+MiystEngine.miystengine.rand.nextInt(1);
+        	}
+        
+        
+        if(MiystEngine.miystengine.rand.nextInt(1) == 0 && this.cloudWeatherOld<11)
+        {
+        	this.cloudWeatherOld += 1;
+        }
+        else if(this.cloudWeatherOld>0)
+        {
+        	this.cloudWeatherOld -= 1;
+        }
+        
+        if(MiystEngine.miystengine.rand.nextInt(1) == 0 && this.cloudskyOld<12)
+        {
+        	this.cloudskyOld += 1;
+        }
+        else if(this.cloudskyOld>0)
+        {
+        	this.cloudskyOld -= 1;
+        }
+        
+        this.windUpdated = true;
+        }
+        
+        if(this.windUpdated)
+        {
+        	this.windUpdated = false;
+        }
+        
+        if(this.increaseFog && this.WorldFog < this.setFogDensity)
+        {
+        	//this.WorldFog += 0.0001F;
+        }
+        else if(!this.increaseFog && this.WorldFog > this.setFogDensity)
+        {
+        	//this.WorldFog -= 0.0001F;
+        }
+        this.WorldFog = 0.02F;
+    }
+    
+    public void setFolderName(String sn)
+    {
+        this.folderName = sn;
+        this.worldSettingsLocation = FileBasicJava.sources + sn;
+    }
+   
+    public StructureWorldInfo(String location)
+    {
+	    if(!(FileBasicJava.sources + location).contains("MpServer"))
+	    {
+	    	this.worldSettingsLocation = FileBasicJava.sources + location;
+	    	this.location = location;
+	    }
+	    this.loadorwrite = 1;
+    }
+
+    private String dataOneString = "";
+    private boolean generateSeed = false;
+    
+    public void readDataOfStructureWorld()
+    {
+    	if(this.location.contains("World") && this.loadorwrite == 0)
+    	{
+    		if(MiystEngine.miystengine.thePlayer != null)
+    		{
+    			MiystEngine.miystengine.thePlayer.inventory.readDataOfPlayer(this.location);
+    		}
+    		
+	    	File[] files = FileBasicJava.loadFilesFromFolder(this.location + "/");
+	    	if(files != null)
+	    	{
+		    	for(int i = 0;i < files.length;++i)
+			    {
+		    		if(files[i].getName().contains("World_Settings"))
+		    		{
+		    			String[] lines = FileBasicJava.readFromFile(files[i]).split("\r\n");
+		    			
+		    			for(int j = 0;j < lines.length;++j)
+		    		    {
+		    				System.out.println("[Read] world data: " + lines[j]);
+		    				if(lines[j].contains("seed"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					seed = splitLine[1].replace(":", "");
+		    					System.out.println("[World Seed] : " + seed);
+		    					if(seed.isEmpty())
+		    					{
+		    						this.generateSeed = true;
+		    					}
+		    				}
+		    				else if(lines[j].contains("playerX"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					MiystEngine.miystengine.thePlayer.posX = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("playerY"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					MiystEngine.miystengine.thePlayer.posY = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				if(lines[j].contains("playerZ"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					MiystEngine.miystengine.thePlayer.posZ = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("fogDensity"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.fogDensity = Float.parseFloat(splitLine[1].replace(":", ""));	;
+		    				}
+		    				else if(lines[j].contains("generatorOptions"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.generatorOptions = splitLine[1].replace(":", "");
+		    				}
+		    				else if(lines[j].contains("folderName"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.folderName = splitLine[1].replace(":", "");
+		    				}
+		    				else if(lines[j].contains("GameType"))
+		    				{
+		    					String[] splitLines = lines[j].split(":");
+		    					this.theGameType.setID(Integer.parseInt(splitLines[1].replace(":", "")));
+		    				}
+		    				else if(lines[j].contains("SpawnX"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.spawnX = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("SpawnY"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.spawnY = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("SpawnZ"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.spawnZ = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("Time") && !lines[j].contains("stop") && !lines[j].contains("Day"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.totalTime = Long.parseLong(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("DayTime") && !lines[j].contains("stop"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.setWorldTime(Integer.parseInt(splitLine[1].replace(":", "")));
+		    				}
+		    				else if(lines[j].contains("timeSpeed"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.timeSpeed = Integer.parseInt(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("LevelName"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.levelName = splitLine[1].replace(":", "");
+		    				}
+		    				else if(lines[j].contains("version"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.saveVersion = Integer.parseInt(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("gravity"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.gravity = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("temperature"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.temperature = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("fogDensity"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.setFogDensity = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("fungusGrowth"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.fungusGrowth = Integer.parseInt(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("radiation"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.radiation = Integer.parseInt(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("waterHeightFromTides"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.waterHeightFromTides = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("cloudWeather"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.cloudWeather = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("cloudsky"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.cloudsky = Float.parseFloat(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("Badlandspots"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.Badlandspots = Integer.parseInt(splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("stopTime"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					String bool = (splitLine[1].replace(":", ""));
+		    					if(bool.contains("true"))
+		    					{
+		    						this.stopTime = true;
+		    					}
+		    					else
+		    					{
+		    						this.stopTime = false;
+		    					}
+		    				}
+		    				else if(lines[j].contains("difficulty"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					this.difficulty = (splitLine[1].replace(":", ""));
+		    				}
+		    				else if(lines[j].contains("initialized"))
+		    				{
+		    					String[] splitLine = lines[j].split(":");
+		    					String bool = (splitLine[1].replace(":", ""));
+		    					if(bool.contains("true"))
+		    					{
+		    						this.initialized = true;
+		    					}
+		    					else
+		    					{
+		    						this.initialized = false;
+		    					}
+		    				}
+		    		    }
+	    		    
+		    		}
+			    }
+	    	}
+    	}
+    }
+    
+    public void saveDataOfStructureWorld()
+    {
+    	if(this.loadorwrite == 1)
+    	{
+    		if(MiystEngine.miystengine.thePlayer != null)
+    		{
+    			MiystEngine.miystengine.thePlayer.inventory.writeDataOfPlayer(this.folderName,this.location);
+    		}
+    		
+	    	String[] worldData;
+	    	System.out.println("Data:");
+	    	dataOneString += "seed:" + this.seed + "\r\n";
+	    	dataOneString += "generatorOptions:" + this.generatorOptions + "\r\n";
+	    	dataOneString += "folderName:" + this.folderName + "\r\n";
+			dataOneString += "GameType:" + this.theGameType.getID() + "\r\n";
+			dataOneString += "SpawnX:" + this.spawnX + "\r\n";
+			dataOneString += "SpawnY:" + this.spawnY + "\r\n";
+			dataOneString += "SpawnZ:" + this.spawnZ + "\r\n";
+			dataOneString += "Time:" + this.totalTime + "\r\n";
+			dataOneString += "timeSpeed:" + this.timeSpeed + "\r\n";
+
+			if(MiystEngine.miystengine.thePlayer != null && MiystEngine.miystengine.thePlayer.worldObj != null && MiystEngine.miystengine.thePlayer.worldObj.getStructureWorldInfo() != null)
+			{
+				dataOneString += "DayTime:" + MiystEngine.miystengine.thePlayer.worldObj.getStructureWorldInfo().getWorldTime() + "\r\n";
+			}
+			
+			dataOneString += "SizeOnDisk:" + this.sizeOnDisk + "\r\n";
+			dataOneString += "LevelName:" + this.levelName + "\r\n";
+			dataOneString += "version:" + this.saveVersion + "\r\n";
+			dataOneString += "gravity:" + this.gravity + "\r\n";
+			dataOneString += "temperature:" + this.temperature + "\r\n";
+			dataOneString += "fogDensity:" + this.setFogDensity + "\r\n";
+			dataOneString += "fungusGrowth:" + this.fungusGrowth + "\r\n";
+			dataOneString += "radiation:" + this.radiation + "\r\n";
+			dataOneString += "waterHeightFromTides:" + this.waterHeightFromTides + "\r\n";
+			dataOneString += "cloudWeather:" + this.cloudWeather + "\r\n";
+			dataOneString += "cloudsky:" + this.cloudsky + "\r\n";
+			dataOneString += "Badlandspots:" + this.Badlandspots + "\r\n";
+			dataOneString += "stopTime:" + this.stopTime + "\r\n";
+			dataOneString += "difficulty:" + this.difficulty + "\r\n";
+			dataOneString += "initialized:" + this.initialized + "\r\n";
+
+			
+			if(MiystEngine.miystengine.thePlayer != null)
+			{
+				dataOneString += "playerX:" + MiystEngine.miystengine.thePlayer.posX + "\r\n";
+				dataOneString += "playerY:" + MiystEngine.miystengine.thePlayer.posY + "\r\n";
+				dataOneString += "playerZ:" + MiystEngine.miystengine.thePlayer.posZ + "\r\n";
+				System.out.println("" + MiystEngine.miystengine.thePlayer.posX);
+				System.out.println("" + MiystEngine.miystengine.thePlayer.posY);
+				System.out.println("" + MiystEngine.miystengine.thePlayer.posZ);
+			}
+			File[] files = FileBasicJava.loadFilesFromFolder(location + "/");
+	    	if(files != null)
+	    	{
+		    	for(int i = 0;i < files.length;++i)
+			    {
+		    		if(files[i].getName().contains("World_Settings"))
+		    		{
+		    			String[] lines = FileBasicJava.readFromFile(files[i]).split("\r\n");
+		    			
+		    			for(int j = 0;j < lines.length;++j)
+		    		    {
+		    				System.out.println("[Read] world data: " + lines[j]);
+		    		    }
+		    		}
+			    }
+	    	}
+			
+			worldData = dataOneString.split("\r\n");
+		    FileBasicJava.writeBasic(worldData, FileBasicJava.sources + "saves/" + this.folderName + "/" + "World_Settings.txt");
+	        System.out.println("Write world data...");
+		    this.loadorwrite = 0;
+    	}
+    }
+
+    public int getSpawnX(){return 250;}
+    public int getSpawnY(){return 156;}
+    public int getSpawnZ(){return 250;}
+
+    public String getFolderName(){return this.folderName;}
+    
+    public String getDifficulty(){return this.difficulty;}
+    
+    public float getGravity(){return this.gravity;}
+    
+    public float getTemperature(){return this.temperature;}
+    
+    public float getFogDensity(){return this.fogDensity;}
+
+    public int getFungusGrowth(){return this.fungusGrowth;}
+
+    public int getRadiation(){return this.radiation;}
+
+    public long getWorldTotalTime(){return this.totalTime;}
+
+    public int getWorldTime(){return this.worldTime;}
+
+    public long getSizeOnDisk(){return this.sizeOnDisk;}
+
+    public void setSpawnX(int sx){this.spawnX = sx;}
+    public void setSpawnY(int sy){this.spawnY = sy;}
+    public void setSpawnZ(int sz){this.spawnZ = sz;}
+
+    public void setTWorldTime(long twt)
+    {
+        this.totalTime = twt;
+    }
+
+    public void setWorldTime(int wt)
+    {
+        this.worldTime = wt;
+    }
+    
+    public void addWorldTime(int wt)
+    {
+        this.worldTime += wt;
+    }
+    
+    public void setSpawnPosition(int x, int y, int z){this.spawnX = x;this.spawnY = y;this.spawnZ = z;}
+
+    public String getWorldName()
+    {
+        return this.levelName;
+    }
+
+    public void setWorldName(String sw)
+    {
+        this.levelName = sw;
+    }
+
+    public int getSaveVersion()
+    {
+        return this.saveVersion;
+    }
+
+    public void setSaveVersion(int ssv)
+    {
+        this.saveVersion = ssv;
+    }
+
+    public boolean getStoptime()
+    {
+    	return this.stopTime;
+    }
+    
+    public void setStoptime(boolean b)
+    {
+    	this.stopTime = b;
+    }
+   
+    public long getLastTimePlayed()
+    {
+        return this.lastTimePlayed;
+    }
+
+    public SettingsOfStructureWorld.GameType getGameType()
+    {
+    	if(this.theGameType.getID() == 1)
+    	{
+    		return GameType.SURVIVAL;
+    	}
+    	else if(this.theGameType.getID() == 2)
+    	{
+    		return GameType.FORGE;
+    	}
+    	else return GameType.NOT_SET;
+    }
+    
+    public void setGameType(SettingsOfStructureWorld.GameType t)
+    {
+        this.theGameType = t;
+    }
+
+    public String getGeneratorOptions()
+    {
+        return this.generatorOptions;
+    }
+
+    public boolean isInitialized()
+    {
+        return this.initialized;
+    }
+
+    public void setServerInitialized(boolean tf)
+    {
+        this.initialized = tf;
+    }
+}
