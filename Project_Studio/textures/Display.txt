@@ -1,0 +1,4 @@
+WindowWidth:854
+WindowHeight:480
+DepthBits:12
+Samples:2

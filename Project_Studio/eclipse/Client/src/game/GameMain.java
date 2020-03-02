@@ -18,17 +18,27 @@ public class GameMain
 	 */
 	public GameMain(){}
 	
+	private static String logo;
+	
 	/**
 	 * Set the icon of the window
 	 * @throws IOException
 	 */
 	public static ByteBuffer setIcon() throws IOException 
     {
-		String logo = FileBasicJava.source+"/The Structure World/The Structure World Logo blue.png";
-		File file = new File(logo);
-		if(!file.exists())
+		try
 		{
-			System.out.println("Logo File doesn't exists!");
+			logo = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/textures/Logo blue.png";
+			File file = new File(logo);
+			if(!file.exists())
+			{
+				System.out.println("Logo File doesn't exists: " + file.getPath());
+				
+			}
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
 		}
     	return MiystEngine.miystengine.getTextureManager().convertImageData(logo);
     }

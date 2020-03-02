@@ -147,7 +147,7 @@ public class TextureManager implements ITickable
     {
     	 try
   	    {
-        String sourceFinal = FileBasicJava.source+"/The Structure World" + source;
+        String sourceFinal = FileBasicJava.source+"/" + source;
         int textureID;
     	if(sourceFinal.contains("None"))
     	{

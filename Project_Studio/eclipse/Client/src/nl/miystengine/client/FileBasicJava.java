@@ -26,22 +26,23 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Random;
+
 import javax.imageio.ImageIO;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
 import org.apache.commons.io.FileUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 
 public class FileBasicJava
 {
-	//System.getProperty("user.home") + 
+	public static String currentUsersHomeDir = System.getProperty("user.home");
 	public static String Disk = "C";
 	public static Calendar cal = Calendar.getInstance();
 	public static String name;
-	public static String source = Disk+":\\Game";
-	public static String sources = Disk+":\\Game/The Structure World/";
-	public static String sourceShaders = Disk+":\\Game/The Structure World/shaders/";
-	public static String sourceModels = Disk+":\\Game/The Structure World/models/";
+	public static String source = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/textures/";
+	public static String sources = Disk + ":\\";
+	public static String sourceShaders = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/shaders/";
 	public static String date = cal.getTime()+"/";
 	public static String version = "1.0.0";
 	

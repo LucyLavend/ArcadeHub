@@ -53,7 +53,7 @@ public class FontRenderer
         else
         {
         	 System.out.print("Warning: Font not loaded!");
-             System.out.print("Search location: "+FileBasicJava.source+"/The Structure World/las.png");
+             System.out.print("Search location: "+FileBasicJava.source+"las.png");
         }
     }
 
@@ -62,7 +62,7 @@ public class FontRenderer
         BufferedImage im;
         try
         {
-        im = ImageIO.read(new File(FileBasicJava.source+"/The Structure World/las.png"));
+        im = ImageIO.read(new File(FileBasicJava.source+"las.png"));
         }
         catch (IOException ex)
         {

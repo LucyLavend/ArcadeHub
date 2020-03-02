@@ -118,8 +118,6 @@ public class MiystEngine implements Runnable
 
     /** The ScreenGui that's being displayed at the moment. */
 	private ScreenGui currentScreen;
-  
-	private final File location;
 	
 	/**
 	 * The version of the framework
@@ -177,7 +175,7 @@ public class MiystEngine implements Runnable
 	/**
 	 * Location  file settings display
 	 */
-	private String Location = "The Structure World/Display.txt";
+	private String Location = "Display.txt";
 	
 	/**
 	 * Display settings
@@ -196,7 +194,6 @@ public class MiystEngine implements Runnable
     	this.camera = new Camera();
     	this.rand = new Random();
     	this.game = new GameMain();
-    	this.location = new File(FileBasicJava.source+"/The Structure World");
     	this.debugUpdateTime = getSystemTime();
         this.launchedVersion = FileBasicJava.version;
         this.displayWidth = 854;
@@ -768,9 +765,6 @@ public class MiystEngine implements Runnable
         this.systemTime = getSystemTime();
     }
 
-    /**
-     * Return the singleton StructureWorld instance for the game
-     */
     public static MiystEngine getMiystEngine()
     {
         return miystengine;

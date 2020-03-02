@@ -133,7 +133,7 @@ public class MainMenuGui extends ScreenGui
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         {
-        	MiystEngine.miystengine.getTextureManager().bindTexture("/Menu/wooden hut background.png",0,true);  	
+        	//MiystEngine.miystengine.getTextureManager().bindTexture("/Menu/wooden hut background.png",0,true);  	
 	 	    GL11.glColor4f(0.7F, 0.7F, 0.7F, 1F - this.fadeToBlack);
 	 	    //Tessellator tes = Tessellator.instance;
 	        //tes.startDrawingQuads();
@@ -159,7 +159,7 @@ public class MainMenuGui extends ScreenGui
       	
         if(!this.showButtons)
         {   
-        	this.drawCenteredStringWithColor(fontRendererObj,"Press any key to continue", (int)(this.width / 2) , (int)(this.height / 1.2), this.alphaStartString, this.alphaStartString, this.alphaStartString, this.alphaStartString);
+        	this.drawCenteredStringWithColor(fontRendererObj,"Press any key to continue", (int)(this.width / 2) , (int)(this.height / 1.1), this.alphaStartString, this.alphaStartString, this.alphaStartString, this.alphaStartString);
         	this.add = 0;
         }
         
