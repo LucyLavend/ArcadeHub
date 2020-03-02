@@ -113,10 +113,5 @@
     "location": "C:\\Game\\Game\\jars\\libraries\\net\\java\\jinput\\jinput\\2.0.5\\jinput-2.0.5.jar",
     "status": "UNRESOLVED",
     "error": "No call model found for \u0027C:\\Game\\Game\\jars\\libraries\\net\\java\\jinput\\jinput\\2.0.5\\jinput-2.0.5.jar\u0027. Neither fingerprint \u002739c7796b469a600f72380316f6b1f11db6c2c7c4\u0027 nor symbolic name \u0027jinput-2.0.5\u0027 are known."
-  },
-  "C:\\Users\\cefas\\Desktop\\Project_Studio\\eclipse\\Client\\src": {
-    "location": "C:\\Users\\cefas\\Desktop\\Project_Studio\\eclipse\\Client\\src",
-    "status": "UNRESOLVED",
-    "error": "No class path info available for \u0027C:\\Users\\cefas\\Desktop\\Project_Studio\\eclipse\\Client\\src\u0027. Skipped."
   }
 }

@@ -2,9 +2,9 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
-	<classpathentry kind="lib" path="C:/Users/cefas/Desktop/Project_Studio/jars/versions/lwjgl/lwjgl-natives/gson-2.2.4.jar">
+	<classpathentry kind="lib" path="C:/Users/cefas/Desktop/Project_Studio/jars/lwjgl/lwjgl.jar">
 		<attributes>
-			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="Client/jars/versions/lwjgl/lwjgl-natives"/>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="C:/Users/cefas/Desktop/Project_Studio/jars/lwjgl/lwjgl-natives"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="jars/libraries/org/apache/commons/commons-compress/1.8.1/commons-compress-1.8.1.jar"/>

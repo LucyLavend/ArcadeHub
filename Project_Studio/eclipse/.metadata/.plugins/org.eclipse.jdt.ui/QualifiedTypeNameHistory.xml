@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="nl.thestructureworld.client.renderer.entity.LODSmallModel"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.settings.Settings"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.shaders.RawModel"/>
 <fullyQualifiedTypeName name="org.lwjgl.input.Keyboard"/>
@@ -24,6 +25,8 @@
 <fullyQualifiedTypeName name="nl.thestructureworld.client.test.MainGameLoop"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.shaders.Loader"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.shaders.CameraAndPlayerAnimations"/>
+<fullyQualifiedTypeName name="net.java.games.input.Mouse"/>
+<fullyQualifiedTypeName name="org.lwjgl.input.Mouse"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.gui.MainMenuGui"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.TheStructureWorld"/>
 <fullyQualifiedTypeName name="nl.thestructureworld.client.test.ParticleSystem"/>
@@ -43,6 +46,7 @@
 <fullyQualifiedTypeName name="java.io.File"/>
 <fullyQualifiedTypeName name="java.io.InputStream"/>
 <fullyQualifiedTypeName name="java.io.FileInputStream"/>
+<fullyQualifiedTypeName name="org.lwjgl.util.vector.Vector3f"/>
 <fullyQualifiedTypeName name="javax.imageio.ImageReader"/>
 <fullyQualifiedTypeName name="javax.imageio.ImageIO"/>
 <fullyQualifiedTypeName name="javax.imageio.stream.ImageInputStream"/>
@@ -53,11 +57,7 @@
 <fullyQualifiedTypeName name="java.nio.ByteBuffer"/>
 <fullyQualifiedTypeName name="java.io.IOException"/>
 <fullyQualifiedTypeName name="nl.miystengine.client.gui.Gui"/>
-<fullyQualifiedTypeName name="org.lwjgl.opengl.GL11"/>
-<fullyQualifiedTypeName name="org.lwjgl.util.Display"/>
-<fullyQualifiedTypeName name="nl.miystengine.client.MiystEngine"/>
-<fullyQualifiedTypeName name="net.java.games.input.Mouse"/>
-<fullyQualifiedTypeName name="org.lwjgl.input.Mouse"/>
-<fullyQualifiedTypeName name="org.lwjgl.util.vector.Matrix4f"/>
-<fullyQualifiedTypeName name="org.lwjgl.util.vector.Vector3f"/>
+<fullyQualifiedTypeName name="nl.miystengine.client.renderer.terrain.RenderTerrain"/>
+<fullyQualifiedTypeName name="paulscode.sound.libraries.LibraryJavaSound.Exception"/>
+<fullyQualifiedTypeName name="game.spawnobjects.plants.big.BigPlantList"/>
 </qualifiedTypeNameHistroy>

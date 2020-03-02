@@ -169,9 +169,9 @@ public class MiystEngine implements Runnable
     
     /**
      * Set the frame buffer object for Multisampled
-     */	
-	public Fbo fbo_Out;
+     */
 	
+	public Fbo fbo_Out;
 	private Camera camera;
 	
 	/**

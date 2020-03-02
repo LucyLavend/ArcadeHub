@@ -1,0 +1,78 @@
+package game.spawnobjects.plants.small;
+
+import nl.miystengine.client.MiystEngine;
+import nl.miystengine.client.renderer.EntityRenderer;
+import nl.miystengine.client.renderer.entity.LODSmallModel;
+import org.lwjgl.util.vector.Vector3f;
+
+public class SmallPlantList
+{
+	public int spawnSmallPlant(String name, Vector3f position)
+	{
+		if(name.contains("Fern") || name.contains("fern"))
+		{
+			LODSmallModel small_fern = new LODSmallModel(1,"plants/fern","Plant/weeds",LODSmallModel.class);
+			small_fern.materialType = 18;
+			small_fern.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_fern);
+		} 
+		else if(name.contains("Long") || name.contains("long"))
+		{
+			LODSmallModel LongLeaf = new LODSmallModel(1,"plants/LongLeaf","Plant/weeds",LODSmallModel.class);
+			LongLeaf.materialType = 18;
+			LongLeaf.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(LongLeaf);
+		}
+		else if(name.contains("Weed") || name.contains("weed"))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/small_malanga","Plant/weeds",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}
+		else if(name.contains("Grass") || name.contains("grass"))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/grass","plant/dead_grass",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}
+		else if(!name.contains("Giant") && (name.contains("Monstera") || name.contains("monstera")))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/monstera","plant/monstera",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}
+		else if((name.contains("Giant") && name.contains("Monstera")) || (name.contains("giant") && name.contains("monstera")))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/monstera_big","plant/monstera_big",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}
+		else if(name.contains("Leafer") || name.contains("leafer"))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/t","plant/monstera_big",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}
+		else if((!name.contains("2") && name.contains("Unknown") && name.contains("Plant")) || (!name.contains("2") &&name.contains("unknown") && name.contains("plant")))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/unknown_plant","plant/monstera",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}
+		else if((name.contains("Unknown") && name.contains("Plant") && name.contains("2")) || (name.contains("unknown") && name.contains("plant") && name.contains("2")))
+		{
+			LODSmallModel small_weed = new LODSmallModel(1,"plants/unknown_plant_2","plant/monstera",LODSmallModel.class);
+			small_weed.materialType = 18;
+			small_weed.setPosition(position);
+			EntityRenderer.nmr.spawnEntity(small_weed);
+		}	
+	
+		return -1;
+	}
+}
