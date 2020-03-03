@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<session version="1.0">
-<refactoring accessors="true" comment="Delete element from project &apos;Client&apos;&#x0D;&#x0A;- Original project: &apos;Client&apos;&#x0D;&#x0A;- Original element: &apos;j3d-core-1.3.1.jar&apos;" description="Delete element" element1="jars/libraries/j3d-core-1.3.1.jar" elements="0" flags="589830" id="org.eclipse.jdt.ui.delete" resources="1" stamp="1565173515208" subPackages="false" version="1.0"/>
-</session>

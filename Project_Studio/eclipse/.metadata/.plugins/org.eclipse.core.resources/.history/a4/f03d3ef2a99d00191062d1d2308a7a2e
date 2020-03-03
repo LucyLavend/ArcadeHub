@@ -1,7 +1,0 @@
-package nl.thestructureworld.network.play.client;
-
-
-public interface INetHandlerPlayClient extends INetHandler
-{
-    
-}
