@@ -40,9 +40,11 @@ public class FileBasicJava
 	public static String Disk = "C";
 	public static Calendar cal = Calendar.getInstance();
 	public static String name;
-	public static String source = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/textures/";
+	//public static String source = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/textures/";
+	public static String source = "../textures/";
 	public static String sources = Disk + ":\\";
-	public static String sourceShaders = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/shaders/";
+	//public static String sourceShaders = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/shaders/";
+	public static String sourceShaders = "../shaders/";
 	public static String date = cal.getTime()+"/";
 	public static String version = "1.0.0";
 	

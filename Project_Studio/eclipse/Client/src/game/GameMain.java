@@ -28,7 +28,7 @@ public class GameMain
     {
 		try
 		{
-			logo = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/textures/Logo blue.png";
+			logo = FileBasicJava.source + "Logo blue.png";
 			File file = new File(logo);
 			if(!file.exists())
 			{
