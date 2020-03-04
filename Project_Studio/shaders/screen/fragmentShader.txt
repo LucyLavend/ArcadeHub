@@ -34,14 +34,14 @@ void main(void)
       {
             for(int i = 0;i < 5;++i)
             {
-                  vec4 screenColorsBlurr = (texture(screen, vec2(xCoord + (i / 1000F),yCoord)));
+                  vec4 screenColorsBlurr = (texture(screen, vec2(xCoord + (i / 1000.0),yCoord)));
                   out_color += screenColorsBlurr;
-                  screenColorsBlurr = (texture(screen, vec2(xCoord,yCoord + (i / 1000F))));
+                  screenColorsBlurr = (texture(screen, vec2(xCoord,yCoord + (i / 1000.0))));
                   out_color += screenColorsBlurr;
 
-                  screenColorsBlurr = (texture(screen, vec2(xCoord - (i / 1000F),yCoord)));
+                  screenColorsBlurr = (texture(screen, vec2(xCoord - (i / 1000.0),yCoord)));
                   out_color += screenColorsBlurr;
-                  screenColorsBlurr = (texture(screen, vec2(xCoord,yCoord - (i / 1000F))));
+                  screenColorsBlurr = (texture(screen, vec2(xCoord,yCoord - (i / 1000.0))));
                   out_color += screenColorsBlurr;
                   out_color/= 8;
             }
