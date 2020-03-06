@@ -31,7 +31,6 @@ public class GameMain
 			if(!file.exists())
 			{
 				System.out.println("Logo File doesn't exists: " + file.getPath());
-				
 			}
 		}
 		catch(Exception e)

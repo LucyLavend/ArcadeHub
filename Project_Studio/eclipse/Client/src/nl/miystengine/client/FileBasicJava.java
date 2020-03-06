@@ -90,9 +90,13 @@ public class FileBasicJava
 	public static void backupFile()
 	{
 		   date = date.replaceAll(":", ".");
-		   createFolder(source+"/backup/"+date,false);
-           File srcDir = new File(source+"/mcp - Game/eclipse/Client/src/");
-           File destDir = new File(source+"/backup/"+date+"/");
+		   
+		   createFolder(source + "/../../../backup/" + date,false);
+		   
+           File destDir = new File(source + "/../../../backup/" + date);
+           
+           File srcDir = new File(source + "/../eclipse/Client/src/");
+           
            try 
            {
         	   FileUtils.copyDirectory(srcDir, destDir);
