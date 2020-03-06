@@ -38,7 +38,7 @@ public abstract class ShaderProgram
     	GL20.glAttachShader(programID, geometryShaderID);
         GL20.glAttachShader(programID, fragmentShaderID);    
         String shaderName = vertexFile.replace("VertexShader.txt", "");
-        String finalName = shaderName.replace(FileBasicJava.sourceShaders, "");
+        String finalName = shaderName.replace(MiystEngine.miystengine.getPath().sourceShaders, "");
         shadersList.add(new ArrayListShadersLoaded(finalName,programID, vertexFile, fragmentFile, vertexShaderID, fragmentShaderID));
         bindAttributes();
         GL20.glLinkProgram(programID);
@@ -54,7 +54,7 @@ public abstract class ShaderProgram
         GL20.glAttachShader(programID, vertexShaderID);
         GL20.glAttachShader(programID, fragmentShaderID);    
         String shaderName = vertexFile.replace("VertexShader.txt", "");
-        String finalName = shaderName.replace(FileBasicJava.sourceShaders, "");
+        String finalName = shaderName.replace(MiystEngine.miystengine.getPath().sourceShaders, "");
         shadersList.add(new ArrayListShadersLoaded(finalName,programID, vertexFile, fragmentFile, vertexShaderID, fragmentShaderID));
         bindAttributes();
         GL20.glLinkProgram(programID);
@@ -72,7 +72,7 @@ public abstract class ShaderProgram
 		GL20.glAttachShader(programID, vertexShaderID);
 		GL20.glAttachShader(programID, fragmentShaderID);
 		String shaderName = vertexFile.replace("VertexShader.txt", "");
-	    String finalName = shaderName.replace(FileBasicJava.sourceShaders, "");
+	    String finalName = shaderName.replace(MiystEngine.miystengine.getPath().sourceShaders, "");
 	    shadersList.add(new ArrayListShadersLoaded(finalName,programID, vertexFile, fragmentFile, vertexShaderID, fragmentShaderID));
 		bindAttributes(inVariables);
 		GL20.glLinkProgram(programID);

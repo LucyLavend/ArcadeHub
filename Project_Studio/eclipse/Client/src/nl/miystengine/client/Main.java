@@ -35,10 +35,6 @@ public class Main
 
     public static void main(String[] option)
     {
-    	if(backup)
-    	{
-    		FileBasicJava.backupFile();
-    	}
         OptionParser op = new OptionParser();
         op.allowsUnrecognizedOptions();
         op.accepts("fullscreen");

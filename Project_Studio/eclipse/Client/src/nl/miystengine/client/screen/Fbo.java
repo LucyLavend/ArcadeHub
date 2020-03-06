@@ -54,8 +54,8 @@ public class Fbo
     }
     
     //Render
-    private static String VERTEX_FILE = FileBasicJava.sourceShaders + "screen/vertexShader.txt";
-   	private static String FRAGMENT_FILE = FileBasicJava.sourceShaders + "screen/fragmentShader.txt";
+    private static String VERTEX_FILE = MiystEngine.miystengine.getPath().sourceShaders + "screen/vertexShader.txt";
+   	private static String FRAGMENT_FILE = MiystEngine.miystengine.getPath().sourceShaders + "screen/fragmentShader.txt";
    	
    	public static StaticShader shader = new StaticShader(VERTEX_FILE, FRAGMENT_FILE);  
     public static float brightnessEffect = 1F;  

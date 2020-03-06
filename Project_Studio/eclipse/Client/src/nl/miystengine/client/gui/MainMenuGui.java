@@ -182,7 +182,7 @@ public class MainMenuGui extends ScreenGui
 		this.drawCenteredStringWithColor(fontRendererObj,"fps: " + MiystEngine.getMiystEngine().debugFPS, (int)(this.width / 18) , (int)(this.height / 6), 1,1,1,1);
 	 }
     
-     private int textureID = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.sources + "missing_texture" + ".png");
+     private int textureID = MiystEngine.miystengine.getTextureManager().loadTexture2(MiystEngine.miystengine.getPath().sources + "missing_texture" + ".png");
     
     
     private float fadeToBlack = 1F;

@@ -26,7 +26,7 @@ public class GameMain
     {
 		try
 		{
-			logo = FileBasicJava.source + "Logo blue.png";
+			logo = MiystEngine.miystengine.getPath().source + "Logo blue.png";
 			File file = new File(logo);
 			if(!file.exists())
 			{

@@ -187,9 +187,24 @@ public class MiystEngine implements Runnable
 	 */
 	private AudioPlayer audioPlayer;
 	
+	/**
+	 * All the paths or sources of .txt, .png, .wav and gif
+	 */
+	private Sources pathSources;
+	
+	/**
+	 * The constructor of the main MiystEngine Class
+	 * @param isFullScreen
+	 */
+	
     public MiystEngine(boolean isFullScreen)
     {
     	miystengine = this;
+    	this.pathSources = new Sources();
+    	if(Main.backup)
+    	{
+    		FileBasicJava.backupFile();
+    	}
     	this.audioPlayer = new AudioPlayer();
     	this.logger = LogManager.getLogger();
         this.acceptedSymbols = " !@#$%&*()\'+,-./1234567890:;<=>?\"ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
@@ -200,12 +215,17 @@ public class MiystEngine implements Runnable
     	this.rand = new Random();
     	this.game = new GameMain();
     	this.debugUpdateTime = getSystemTime();
-        this.launchedVersion = FileBasicJava.version;
+        this.launchedVersion = this.pathSources.version;
         this.displayWidth = 854;
         this.displayHeight = 480;
         this.fullscreen = isFullScreen;
         ImageIO.setUseCache(false);
         lastFrameTime = getCurrentTime(); 	
+    }
+    
+    public Sources getPath()
+    {
+    	return this.pathSources;
     }
     
     public AudioPlayer getAudioPlayer()
@@ -258,7 +278,7 @@ public class MiystEngine implements Runnable
         try
         {
 			@SuppressWarnings("resource")
-			BufferedReader read = new BufferedReader(new FileReader(new File(FileBasicJava.source,Location)));
+			BufferedReader read = new BufferedReader(new FileReader(new File(this.pathSources.source,Location)));
 			String line = "";	
 		    if(read != null && (line = read.readLine()) != null)
 	        {

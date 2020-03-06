@@ -147,7 +147,7 @@ public class TextureManager implements ITickable
     {
     	 try
   	    {
-        String sourceFinal = FileBasicJava.source + source;
+        String sourceFinal = MiystEngine.miystengine.getPath().source + source;
         int textureID;
     	if(sourceFinal.contains("None"))
     	{
@@ -188,7 +188,7 @@ public class TextureManager implements ITickable
     {
     	try
   	    {
-        String sourceFinal = FileBasicJava.source+"/The Structure World" + source;
+        String sourceFinal = MiystEngine.miystengine.getPath().source+"/The Structure World" + source;
         int textureID;
     	if(sourceFinal.contains("None"))
     	{

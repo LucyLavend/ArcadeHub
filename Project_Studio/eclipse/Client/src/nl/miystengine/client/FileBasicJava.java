@@ -35,23 +35,11 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 
 public class FileBasicJava
-{
-	public static String currentUsersHomeDir = System.getProperty("user.home");
-	public static String Disk = "C";
-	public static Calendar cal = Calendar.getInstance();
-	public static String name;
-	//public static String source = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/textures/";
-	public static String source = "../textures/";
-	public static String sources = Disk + ":\\";
-	//public static String sourceShaders = FileBasicJava.currentUsersHomeDir + "/Documents/GitHub/ArcadeHub/Project_Studio/shaders/";
-	public static String sourceShaders = "../shaders/";
-	public static String date = cal.getTime()+"/";
-	public static String version = "1.0.0";
-	
+{	
 	public static void copyFile(String from, String to)
 	{
-		   File srcDir = new File(sources + from);
-           File destDir = new File(sources + to);
+		   File srcDir = new File(MiystEngine.miystengine.getPath().sources + from);
+           File destDir = new File(MiystEngine.miystengine.getPath().sources + to);
            try 
            {
         	   FileUtils.copyFile(srcDir, destDir);
@@ -75,8 +63,8 @@ public class FileBasicJava
 	
 	public static void copyDirectory(String from, String to)
 	{
-		   File srcDir = new File(sources + from);
-           File destDir = new File(sources + to);
+		   File srcDir = new File(MiystEngine.miystengine.getPath().sources + from);
+           File destDir = new File(MiystEngine.miystengine.getPath().sources + to);
            try 
            {
         	   FileUtils.copyDirectory(srcDir, destDir);
@@ -89,13 +77,13 @@ public class FileBasicJava
       
 	public static void backupFile()
 	{
-		   date = date.replaceAll(":", ".");
+		MiystEngine.miystengine.getPath().date = MiystEngine.miystengine.getPath().date.replaceAll(":", ".");
 		   
-		   createFolder(source + "/../../../backup/" + date,false);
+		createFolder(MiystEngine.miystengine.getPath().source + "/../../../backup/" + MiystEngine.miystengine.getPath().date,false);
 		   
-           File destDir = new File(source + "/../../../backup/" + date);
+           File destDir = new File(MiystEngine.miystengine.getPath().source + "/../../../backup/" + MiystEngine.miystengine.getPath().date);
            
-           File srcDir = new File(source + "/../eclipse/Client/src/");
+           File srcDir = new File(MiystEngine.miystengine.getPath().source + "/../eclipse/Client/src/");
            
            try 
            {
@@ -287,7 +275,7 @@ public class FileBasicJava
 	public static void createBasicFolder(String subFolder)
 	{	
 		BufferedWriter writer;
-	    File logFile = new File(sources + subFolder);
+	    File logFile = new File(MiystEngine.miystengine.getPath().sources + subFolder);
 	    logFile.mkdirs();
 	    try
 	    {

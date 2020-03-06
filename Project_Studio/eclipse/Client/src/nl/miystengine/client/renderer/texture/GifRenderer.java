@@ -30,7 +30,7 @@ public class GifRenderer
 	{
 		if(images == null)
 	   	{
-		    File input = new File(FileBasicJava.source+"/" + this.gifSource + ".gif");  
+		    File input = new File(MiystEngine.miystengine.getPath().source+"/" + this.gifSource + ".gif");  
 		    try 
 		   	{
 		   		InputStream targetStream = new FileInputStream(input);	
@@ -42,7 +42,7 @@ public class GifRenderer
 		   		e.printStackTrace();
 		   	}
 	   	}
-	   	MiystEngine.miystengine.getTextureManager().bindTexture(FileBasicJava.source+"/" + this.gifSource + ".gif",this.images[(int)this.gif].getImage()); 
+	   	MiystEngine.miystengine.getTextureManager().bindTexture(MiystEngine.miystengine.getPath().source+"/" + this.gifSource + ".gif",this.images[(int)this.gif].getImage()); 
 	}
 	
 	public void updateGif()
