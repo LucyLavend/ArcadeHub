@@ -17,7 +17,7 @@ public class GifRenderer
 	public GifRenderer(String gifSource)
 	{
 		this.gifSource = gifSource;
-		this.gifSpeed = 0.1F;
+		this.gifSpeed = 0.25F;
 	}
 	   
 	public GifRenderer(String gifSource, float gifSpeed)

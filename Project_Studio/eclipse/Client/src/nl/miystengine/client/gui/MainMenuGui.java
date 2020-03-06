@@ -11,7 +11,11 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
 import nl.miystengine.client.FileBasicJava;
+import nl.miystengine.client.Main;
 import nl.miystengine.client.MiystEngine;
 import nl.miystengine.client.renderer.Tessellator;
 import nl.miystengine.client.renderer.texture.ArrayListGif;
@@ -31,10 +35,9 @@ import org.lwjgl.util.vector.Vector3f;
 
 public class MainMenuGui extends ScreenGui
 {	
-
+	
     public MainMenuGui()
     {
-        this.backGroundTexture = "/menu/wooden hut background.png";
         this.fadeToBlack = 1F;
         this.listOfGifs.add(new ArrayListGif(new GifRenderer("giphy")));
     }
@@ -55,20 +58,23 @@ public class MainMenuGui extends ScreenGui
     protected void keypressed(char c, int i) 
     {
     	super.keypressed(c,i);
+    	
     	if(!this.showButtons)
         {
     		this.showButtons = true;
-        }
-    }
+        }	
+    	
+    	MiystEngine.miystengine.getAudioPlayer().playSound("../sound/Walking_Through_Bush.wav");
+     }
     
     /**
      * Activate on enter button id(First argument when creating a button)
      */
     protected void actionPerformed(ButtonBasic button)
     {
-        if(button.id == -1)
+        if(button.id == 2)
         {
-			
+			MiystEngine.miystengine.shutdown();
         }
     }
 
@@ -109,9 +115,9 @@ public class MainMenuGui extends ScreenGui
         {
         	int Y = this.height / 4 + 48;
         	int X = this.width / 2 - 100;
-        	this.buttonList.add(new ButtonBasic(1, X, Y, "Campaign",0));
-        	this.buttonList.add(new ButtonBasic(-1, this.width / 2 - 100, this.height / 4 + 82 , "Options",0));
-        	this.buttonList.add(new ButtonBasic(4, X, Y + (72/2) + 12 + 24,  "Quit",0));
+        	this.buttonList.add(new ButtonBasic(0, X, Y, "Campaign",0));
+        	this.buttonList.add(new ButtonBasic(1, this.width / 2 - 100, this.height / 4 + 82 , "Options",0));
+        	this.buttonList.add(new ButtonBasic(2, X, Y + (72/2) + 12 + 24,  "Quit",0));
         	this.add = 1;
         }
         
@@ -119,9 +125,9 @@ public class MainMenuGui extends ScreenGui
         {
         	int Y = this.height / 4 + 48;
         	int X = this.width / 2 - 100;
-        	this.buttonList.add(new ButtonBasic(1, X, Y, "Campaign",0));
-          	this.buttonList.add(new ButtonBasic(-1, this.width / 2 - 100, this.height / 4 + 82 , "Options",0));
-        	this.buttonList.add(new ButtonBasic(4, X, Y + (72/2) + 12 + 24,  "Quit",0));
+        	this.buttonList.add(new ButtonBasic(0, X, Y, "Campaign",0));
+          	this.buttonList.add(new ButtonBasic(1, this.width / 2 - 100, this.height / 4 + 82 , "Options",0));
+        	this.buttonList.add(new ButtonBasic(2, X, Y + (72/2) + 12 + 24,  "Quit",0));
         	this.add = 1;
        }
         
@@ -133,7 +139,7 @@ public class MainMenuGui extends ScreenGui
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         {
-        	//MiystEngine.miystengine.getTextureManager().bindTexture("/Menu/wooden hut background.png",0,true);  	
+        	//MiystEngine.miystengine.getTextureManager().bindTexture("/texture here.png",0,true);  	
 	 	    GL11.glColor4f(0.7F, 0.7F, 0.7F, 1F - this.fadeToBlack);
 	 	    //Tessellator tes = Tessellator.instance;
 	        //tes.startDrawingQuads();
@@ -173,7 +179,7 @@ public class MainMenuGui extends ScreenGui
 		GL13.glActiveTexture(GL13.GL_TEXTURE0);
 		GL11.glBindTexture(GL11.GL_TEXTURE_2D,this.textureID);
 		
-		this.drawCenteredStringWithColor(fontRendererObj,"" + MiystEngine.getMiystEngine().debugFPS, (int)(this.width / 2) , (int)(this.height / 1.2), 1,1,1,1);
+		this.drawCenteredStringWithColor(fontRendererObj,"fps: " + MiystEngine.getMiystEngine().debugFPS, (int)(this.width / 18) , (int)(this.height / 6), 1,1,1,1);
 	 }
     
      private int textureID = MiystEngine.miystengine.getTextureManager().loadTexture2(FileBasicJava.sources + "missing_texture" + ".png");
@@ -187,8 +193,14 @@ public class MainMenuGui extends ScreenGui
     {
     	super.updateGui(x, y);
 
-		if(showGuiTimer>0){--showGuiTimer;}
-        
+		if(this.showGuiTimer > 0)
+		{
+			--this.showGuiTimer;
+		}
+		
+        /**
+         * Change text alpha value with first screen
+         */
         ++this.changeStartString;
         if(this.changeStartString > 100)
         {

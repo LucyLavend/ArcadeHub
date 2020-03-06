@@ -26,8 +26,6 @@ import joptsimple.ArgumentAcceptingOptionSpec;
 import joptsimple.NonOptionArgumentSpec;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
-import nl.miystengine.client.audio.AudioMaster;
-import nl.miystengine.client.audio.Source;
 import com.google.common.collect.HashMultimap;
 import com.google.gson.Gson;
 

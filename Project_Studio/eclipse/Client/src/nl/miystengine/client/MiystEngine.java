@@ -37,8 +37,7 @@ import java.util.concurrent.FutureTask;
 
 import javax.imageio.ImageIO;
 
-import nl.miystengine.client.audio.AudioMaster;
-import nl.miystengine.client.audio.Source;
+import nl.miystengine.client.audio.AudioPlayer;
 import nl.miystengine.client.gui.FontRenderer;
 import nl.miystengine.client.gui.Gui;
 import nl.miystengine.client.gui.MainMenuGui;
@@ -182,10 +181,16 @@ public class MiystEngine implements Runnable
 	 */
 	private int DepthBits;
 	private int Samples;
-
+	
+	/**
+	 * The audio player
+	 */
+	private AudioPlayer audioPlayer;
+	
     public MiystEngine(boolean isFullScreen)
     {
     	miystengine = this;
+    	this.audioPlayer = new AudioPlayer();
     	this.logger = LogManager.getLogger();
         this.acceptedSymbols = " !@#$%&*()\'+,-./1234567890:;<=>?\"ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
     	this.deltatimer = new DeltaTime(20.0F);
@@ -201,6 +206,11 @@ public class MiystEngine implements Runnable
         this.fullscreen = isFullScreen;
         ImageIO.setUseCache(false);
         lastFrameTime = getCurrentTime(); 	
+    }
+    
+    public AudioPlayer getAudioPlayer()
+    {
+    	return this.audioPlayer;
     }
     
     public Camera getCamera()
@@ -388,15 +398,6 @@ public class MiystEngine implements Runnable
         	{
        		 System.out.println("All Textures removed successfully!");
         	}
-        	System.out.println("Stopping OpenAL");
-        	for(int i = 0;i < AudioMaster.source.size();++i)
-       	 	{
-        		AudioMaster.source.get(i).getSource().stop();
-        		AudioMaster.source.get(i).getSource().delete();
-       	 	}
-        	AudioMaster.cleanUpBuffers();
-            AudioMaster.cleanUp();
-            
         	System.out.println("#Game closed#");
             Display.destroy();
             if (!this.hasCrashed)
@@ -439,9 +440,7 @@ public class MiystEngine implements Runnable
             this.currentScreen = new MainMenuGui();
             this.currentScreen.setWorldAndResolution(sr.getScaledWidth(), sr.getScaledHeight());
             FileBasicJava.checkGLError("After Start Game");
-    		AudioMaster.init();
-    		AudioMaster.setListenerData();
-    		FileBasicJava.checkGLError("After Audio"); 		
+        	FileBasicJava.checkGLError("After Audio"); 		
         }
         catch (Throwable var11)
         {
@@ -510,33 +509,11 @@ public class MiystEngine implements Runnable
      */
     private void runGameLoop()
     {
-    	FileBasicJava.checkGLError("Start Game Loop");
-   	 
-    	if(AudioMaster.source != null)
-    	{
-	    	for(int i = 0;i < AudioMaster.source.size();++i)
-	   	 	{
-	   			AudioMaster.source.get(i).getSource().getWasPlaying();
-	   	 	}
-    	}
-      
+    	FileBasicJava.checkGLError("Start Game Loop");      
         if((Display.isCreated() && Display.isCloseRequested()))
         {
             this.shutdown();
         }
-        
-        /**
-         * Stopping OpenAL
-         */
-    	for(int i = 0;i < AudioMaster.source.size();++i)
-    	{
-    		if(!AudioMaster.source.get(i).getSource().isPlaying() && AudioMaster.source.get(i).getSource() != null)
-     		{
-    			AudioMaster.source.get(i).getSource().stop();
-    			AudioMaster.source.get(i).getSource().delete();
-     		}
-    	}
-
         this.runTick();
         FileBasicJava.checkGLError("Before delta time");
         this.deltatimer.updateTimer();

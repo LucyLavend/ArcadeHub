@@ -8,8 +8,6 @@ import java.nio.ByteBuffer;
 import org.lwjgl.util.vector.Vector3f;
 import nl.miystengine.client.FileBasicJava;
 import nl.miystengine.client.MiystEngine;
-import nl.miystengine.client.audio.AudioMaster;
-import nl.miystengine.client.audio.Source;
 
 public class GameMain
 {	
@@ -101,9 +99,4 @@ public class GameMain
 	 */
 	public void updateOnEnterWorld(){}
 
-	/**
-	 * Loads the footstep sounds of the player
-	 * @param source
-	 */
-	public void playFootsteps(Source source){}
 }

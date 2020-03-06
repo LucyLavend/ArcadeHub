@@ -10,7 +10,7 @@ import org.lwjgl.opengl.GL30;
 
 public class ButtonBasic extends Gui
 {
-	public String buttonTextures = new String("/Menu/button.png");
+	public String buttonTextures = new String("button.png");
     public int color = -5;
     public int width;
     public int height;
