@@ -63,8 +63,6 @@ public class MainMenuGui extends ScreenGui
         {
     		this.showButtons = true;
         }	
-    	
-    	MiystEngine.miystengine.getAudioPlayer().playSound("../sound/Walking_Through_Bush.wav");
      }
     
     /**
@@ -108,9 +106,8 @@ public class MainMenuGui extends ScreenGui
      */
     public void drawScreen(int x, int y)
     {
-    	Gui.listOfGifs.get(0).getGifRender().renderGif();
-	   	this.drawTexturedNoTexture(0, 0, this.width,this.height ,0,0);
-
+    	Gui.listOfGifs.get(0).getGifRender().renderGif(this,0,0, this.width, this.height);
+	   	
         if(MiystEngine.miystengine.wasScreenResized() && this.showButtons && this.buttonList.isEmpty())
         {
         	int Y = this.height / 4 + 48;

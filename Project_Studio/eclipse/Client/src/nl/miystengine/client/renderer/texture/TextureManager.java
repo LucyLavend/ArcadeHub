@@ -79,24 +79,19 @@ public class TextureManager implements ITickable
     public static void loadMipmap(int mipmap,boolean Texture2D,float mipmapBiasExtra)
     {
     	float mipmapBias;
-    	
     	GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
-    	
-       
-        	mipmapBias = 0F + mipmapBiasExtra;	
-        	if(GLContext.getCapabilities().GL_EXT_texture_filter_anisotropic)
-        	{
-        		float amount = Math.min(4F, GL11.glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT));	
-        		GL11.glTexParameterf(GL11.GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, amount);
-        	}
-        	else
-        	{
-        		System.out.println("Texture Filter Anisotropic NOT supported");
-        		System.out.println("Textures far away will appear kinda blurry.....");
-        	}
-        
-
-
+        mipmapBias = 0F + mipmapBiasExtra;	
+        if(GLContext.getCapabilities().GL_EXT_texture_filter_anisotropic)
+        {
+        	float amount = Math.min(4F, GL11.glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT));	
+        	GL11.glTexParameterf(GL11.GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, amount);
+        }
+        else
+        {
+        	System.out.println("Texture Filter Anisotropic NOT supported");
+        	System.out.println("Textures far away will appear kinda blurry.....");
+        }
+        	
         if(mipmap == 1)
     	{
   	  		GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST_MIPMAP_NEAREST);
