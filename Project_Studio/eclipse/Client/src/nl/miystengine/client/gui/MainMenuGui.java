@@ -39,7 +39,7 @@ public class MainMenuGui extends ScreenGui
     public MainMenuGui()
     {
         this.fadeToBlack = 1F;
-        this.listOfGifs.add(new ArrayListGif(new GifRenderer("giphy")));
+        this.listOfGifs.add(new ArrayListGif(new GifRenderer("BG")));
     }
 
     /**
