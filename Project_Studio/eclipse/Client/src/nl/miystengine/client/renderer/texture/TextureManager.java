@@ -72,10 +72,8 @@ public class TextureManager implements ITickable
         imageBuffer.flip();
         return imageBuffer; 
     } 
- 
-    //Using GL11.GL_RGB instead of GL11.GL_RGBA when your picture has Alpha, the mixed textures will look like an old tv.
-    //GL11.glTexImage2D(GL13.GL_TEXTURE_CUBE_MAgen_functioni_POSITIVE_X+id, 0, GL11.GL_RGBA, data.getWidth(), data.getHeight(), 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, data.getBuffer());
 
+    
     public static void loadMipmap(int mipmap,boolean Texture2D,float mipmapBiasExtra)
     {
     	float mipmapBias;
@@ -141,57 +139,9 @@ public class TextureManager implements ITickable
   	    }
     }
     
-    public void bindTexture(String source,BufferedImage image)
-    {
-    	try
-  	    {
-        String sourceFinal = MiystEngine.miystengine.getPath().source+"/The Structure World" + source;
-        int textureID;
-    	if(sourceFinal.contains("None"))
-    	{
-    		sourceFinal = sourceFinal.replace("None", "Normal");
-    	}
-    	
-    	Object o = (ITextureObject)this.mapTextureObjects.get(sourceFinal);
-    	
-        if(!sourceFinal.contains("None"))
-        {
-        	if(o == null)
-        	{
-        		try
-        		{
-        			textureID = this.loadTextureWImage(source, (ITextureObject)(o = new SimpleTexture(source)), image);
-        			textureList.add(new ArrayListTextures(((ITextureObject)o).getGlTextureId()));
-        			this.loadMipmap(2, true,1F);
-        		}
-        		catch(Exception e)
-        		{
-        			textureID = ((ITextureObject)o).getGlTextureId();
-        		}
-        	}
-        	else
-        	{
-        		textureID = ((ITextureObject)o).getGlTextureId();
-        	}
-        	GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureID);
-       } 
-  	  }
-  	    catch (Exception v)
-  	    {
-  	    	v.printStackTrace();
-  	    }
-    }
-    
     public int loadTextureExtraNameData(String source,String name)
     {
     	int textureID;
-    	if(source.contains("NormalMap"))
-        {
-    		source=source.replace("1024x ", "");
-    		source=source.replace("512x ", "");
-    		source=source.replace("128x ", "");
-    		source=source.replace("256x ", "");   
-        }
     	Object o = (ITextureObject)this.mapTextureObjects.get(source);
         if(o == null)
         {
@@ -214,13 +164,6 @@ public class TextureManager implements ITickable
     public int loadTexture2(String source)
     {
     	int textureID;
-    	if(source.contains("NormalMap"))
-        {
-    		source=source.replace("1024x ", "");
-    		source=source.replace("512x ", "");
-    		source=source.replace("128x ", "");
-    		source=source.replace("256x ", "");   
-        }
     	Object o = (ITextureObject)this.mapTextureObjects.get(source);
         if(o == null)
         {
