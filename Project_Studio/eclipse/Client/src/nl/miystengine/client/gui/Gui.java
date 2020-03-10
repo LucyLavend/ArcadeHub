@@ -38,10 +38,8 @@ public class Gui
         GL11.glShadeModel(GL11.GL_SMOOTH);
         Tessellator var15 = Tessellator.instance;
         var15.startDrawingQuads();
-        var15.setColorRGBA_F((float)(m >> 16 & 255) / 255.0F, (float)(m >> 8 & 255) / 255.0F, (float)(m & 255) / 255.0F, (float)(m >> 24 & 255) / 255.0F);
         var15.addVertex((double)k, (double)j, (double)this.zLevel);
         var15.addVertex((double)i, (double)j, (double)this.zLevel);
-        var15.setColorRGBA_F((float)(n >> 16 & 255) / 255.0F, (float)(n >> 8 & 255) / 255.0F, (float)(n & 255) / 255.0F, (float)(n >> 24 & 255) / 255.0F);
         var15.addVertex((double)i, (double)l, (double)this.zLevel);
         var15.addVertex((double)k, (double)l, (double)this.zLevel);
         var15.draw();
