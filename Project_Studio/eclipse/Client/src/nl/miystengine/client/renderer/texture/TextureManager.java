@@ -41,7 +41,6 @@ import com.google.common.collect.Maps;
 
 public class TextureManager implements ITickable
 {
-    private static final Logger logger = LogManager.getLogger();
     private final Map mapTextureObjects = Maps.newHashMap();
     private final List listTickables = Lists.newArrayList();
     private final Map mapTextureCounters = Maps.newHashMap();
@@ -139,29 +138,7 @@ public class TextureManager implements ITickable
   	    }
     }
     
-    public int loadTextureExtraNameData(String source,String name)
-    {
-    	int textureID;
-    	Object o = (ITextureObject)this.mapTextureObjects.get(source);
-        if(o == null)
-        {
-        try
-        {
-        	textureID = this.loadTexture(source, (ITextureObject)(o = new SimpleTexture(source)));
-        	textureList.add(new ArrayListTextures(((ITextureObject)o).getGlTextureId(),name));
-        	TextureManager.loadMipmap(2, false,1F);
-        	return textureID;
-        }
-        catch(Exception e)
-        {
-        	e.printStackTrace();	
-        	return ((ITextureObject)o).getGlTextureId();
-        }
-        }
-        else return ((ITextureObject)o).getGlTextureId();
-	 }
-    
-    public int loadTexture2(String source)
+    public int loadTexture(String source)
     {
     	int textureID;
     	Object o = (ITextureObject)this.mapTextureObjects.get(source);
@@ -183,44 +160,9 @@ public class TextureManager implements ITickable
         else return ((ITextureObject)o).getGlTextureId();
 	 }  
     
-    public int loadTextureWImage(String source,BufferedImage image)
-    {
-    	int textureID;
-    	Object o = (ITextureObject)this.mapTextureObjects.get(source);
-        if(o == null)
-        {
-        	try
-        	{
-        		textureID = this.loadTextureWImage(source, (ITextureObject)(o = new SimpleTexture(source)), image);
-        		textureList.add(new ArrayListTextures(((ITextureObject)o).getGlTextureId()));
-        		TextureManager.loadMipmap(2, false,1F);
-        		return textureID;
-        	}
-        	catch(Exception e)
-        	{
-        		e.printStackTrace();	
-        		return ((ITextureObject)o).getGlTextureId();
-        	}
-        }
-        else return ((ITextureObject)o).getGlTextureId();
-	 }
-    
     public static int textureSize = 0;
     
-    public int loadTextureWImage(String loc, final ITextureObject ito,BufferedImage image)
-    {
-        boolean isTexture = ((ITextureObject)ito).loadTextureWImageBuffer(this.theResourceManager, image);
-        this.mapTextureObjects.put(loc, ito);
-        if(!isTexture)
-        {
-           System.out.println("[Server thread/ERROR]: TextureManager Error: Texture Missing in SimpleTexture,TextureManager and TextureUtil.");
-           System.out.println("Texture Location: "+loc);
-           return 0;
-        }
-        else return ito.getGlTextureId();
-    }
-    
-    
+
     public int loadTexture(String loc, final ITextureObject ito)
     {
         boolean isTexture = ((ITextureObject)ito).loadTexture(this.theResourceManager);

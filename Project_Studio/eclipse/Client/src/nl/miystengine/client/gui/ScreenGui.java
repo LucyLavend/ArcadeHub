@@ -23,12 +23,12 @@ import org.lwjgl.opengl.GL30;
 
 public class ScreenGui extends Gui
 {
-    protected static long second = 0;
+    protected long second = 0;
 
     public int width;
     public int height;
 
-    /** A list of all the buttons in this container. */
+    /** A list of all the buttons in this gui. */
     protected List buttonList = new ArrayList();
 
     /** The FontRenderer used by ScreenGui */
@@ -38,14 +38,10 @@ public class ScreenGui extends Gui
     private ButtonBasic selectedButton;
     private int eventButton;
     private long lastMouseEvent;
-    private int field_146298_h;
     public static String backGroundTexture = "/Menu/wooden hut background.png";
     
     public int oldMouseX,oldMouseY;
-    
-    /**
-     * Update the Gui ~ every second
-     */
+
     public void updateGui(int x, int y)
     {
     	for (int i = 0; i < this.buttonList.size(); ++i)
@@ -54,37 +50,62 @@ public class ScreenGui extends Gui
             boolean hoverState = button.enabled && button.visible && x >= button.xPosition && y >= button.yPosition && x < button.xPosition + button.width && y < button.yPosition + button.height;
             if(button.movePlank < 10000 && hoverState)
             {
-            	if(button.swingBack&&button.rotate > 2){button.swingBack=false;}	
-            	if(!button.swingBack&&button.rotate<-2){button.swingBack=true;}	
-            	if(button.movePlank<10){this.oldMouseX=x;this.oldMouseY=y;}
+            	if(button.swingBack&&button.rotate > 2)
+            	{
+            		button.swingBack = false;
+            	}
+            	
+            	if(!button.swingBack&&button.rotate<-2)
+            	{
+            		button.swingBack = true;
+            	}	
+            	
+            	if(button.movePlank<10)
+            	{
+            		this.oldMouseX = x;
+            		this.oldMouseY = y;
+            	}
+            	
             	for(int q =0;q < 500;++q)
             	{
             		if(button.swingBack)
             		{
-            			button.rotate+=0.0005;
-            			button.movePlank+=0.5F;
+            			button.rotate += 0.0005;
+            			button.movePlank += 0.5F;
             		}
             		else if(!button.swingBack)
             		{
-            			button.rotate-=0.0005;
-            			button.movePlank+=0.5F;	
+            			button.rotate -= 0.0005;
+            			button.movePlank += 0.5F;	
             		}
             	}
             }
             else if(!hoverState&&button.rotate>0)
             {	
-            	for(int q =0;q<25;++q)
+            	for(int q =0;q < 25;++q)
             	{
-            		if(!hoverState&&button.rotate>0){button.rotate-=0.001;}	
-            		else if(!hoverState&&this.oldMouseX!=x&&this.oldMouseY!=y){button.movePlank=0;}
+            		if(!hoverState&&button.rotate > 0)
+            		{
+            			button.rotate -= 0.001;
+            		}	
+            		else if(!hoverState && this.oldMouseX != x && this.oldMouseY != y)
+            		{
+            			button.movePlank = 0;
+            		}
             	}
             }
-            else if(!hoverState&&button.rotate<0)
+            else if(!hoverState&&button.rotate < 0)
             {	
-            	for(int q =0;q<25;++q)
+            	for(int q = 0;q < 25;++q)
             	{
-            		if(!hoverState&&button.rotate<0){button.rotate+=0.001;}	
-            		else if(!hoverState&&this.oldMouseX!=x&&this.oldMouseY!=y){button.movePlank=0;}
+            		if(!hoverState&&button.rotate < 0)
+            		{
+            			button.rotate += 0.001;
+            		}	
+            		else if(!hoverState && this.oldMouseX != x && this.oldMouseY != y)
+            		{
+            			button.movePlank=0;
+            		}
             	}
             }
         }
@@ -121,7 +142,7 @@ public class ScreenGui extends Gui
     
     public void drawTexturedNoTexture(double x, double y, double widht,double height, double moveX,double moveY)
     {
-       Tessellator tes = Tessellator.instance;
+        Tessellator tes = Tessellator.instance;
         tes.startDrawingQuads();
         tes.addVertexWithUV(x + moveX, y + height + moveY, this.zLevel,0, 1);
         tes.addVertexWithUV((x + widht) + moveX, (y + height) + moveY, this.zLevel, 1, 1);
@@ -170,35 +191,24 @@ public class ScreenGui extends Gui
     /**
      * Called when the mouse is clicked.
      */
-    protected void mouseClicked(int gen_functioni_73864_1_, int gen_functioni_73864_2_, int gen_functioni_73864_3_)
+    protected void mouseClicked(int mouseX, int mouseY, int mouseEvent)
     {
-        if (gen_functioni_73864_3_ == 0)
+        if (mouseEvent == 0)
         {
-            for (int var4 = 0; var4 < this.buttonList.size(); ++var4)
+            for (int i = 0; i < this.buttonList.size(); ++i)
             {
-                ButtonBasic var5 = (ButtonBasic)this.buttonList.get(var4);
+                ButtonBasic buttonbasic = (ButtonBasic)this.buttonList.get(i);
 
-                if (var5.mousePressed(MiystEngine.miystengine, gen_functioni_73864_1_, gen_functioni_73864_2_))
+                if (buttonbasic.mousePressed(MiystEngine.miystengine, mouseX, mouseY))
                 {
-                    this.selectedButton = var5;
-                    this.actionPerformed(var5);
+                    this.selectedButton = buttonbasic;
+                    this.actionPerformed(buttonbasic);
                 }
             }
         }
     }
 
-    protected void mouseMovedOrUp(int gen_functioni_146286_1_, int gen_functioni_146286_2_, int gen_functioni_146286_3_)
-    {
-        if (this.selectedButton != null && gen_functioni_146286_3_ == 0)
-        {
-            this.selectedButton.mouseReleased(gen_functioni_146286_1_, gen_functioni_146286_2_);
-            this.selectedButton = null;
-        }
-    }
-
-    protected void mouseClickMove(int gen_functioni_146273_1_, int gen_functioni_146273_2_, int gen_functioni_146273_3_, long gen_functioni_146273_4_) {}
-
-    protected void actionPerformed(ButtonBasic gen_functioni_146284_1_) {}
+    protected void actionPerformed(ButtonBasic button) {}
 
     /**
      * Causes the screen to lay out its subcomponents again. This is the equivalent of the Java call
@@ -245,25 +255,15 @@ public class ScreenGui extends Gui
      */
     public void handleMouseInput()
     {
-        int var1 = Mouse.getEventX() * this.width / MiystEngine.miystengine.getScreenWidth();
-        int var2 = this.height - Mouse.getEventY() * this.height / MiystEngine.miystengine.getScreenHeight() - 1;
-        int var3 = Mouse.getEventButton();
+        int x = Mouse.getEventX() * this.width / MiystEngine.miystengine.getScreenWidth();
+        int y = this.height - Mouse.getEventY() * this.height / MiystEngine.miystengine.getScreenHeight() - 1;
+        int eb = Mouse.getEventButton();
 
         if (Mouse.getEventButtonState())
         {
-            this.eventButton = var3;
+            this.eventButton = eb;
             this.lastMouseEvent = MiystEngine.getSystemTime();
-            this.mouseClicked(var1, var2, this.eventButton);
-        }
-        else if (var3 != -1)
-        {
-            this.eventButton = -1;
-            this.mouseMovedOrUp(var1, var2, var3);
-        }
-        else if (this.eventButton != -1 && this.lastMouseEvent > 0L)
-        {
-            long var4 = MiystEngine.getSystemTime() - this.lastMouseEvent;
-            this.mouseClickMove(var1, var2, this.eventButton, var4);
+            this.mouseClicked(x, y, this.eventButton);
         }
     }
 

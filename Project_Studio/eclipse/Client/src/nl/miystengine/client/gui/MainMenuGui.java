@@ -42,14 +42,6 @@ public class MainMenuGui extends ScreenGui
         this.listOfGifs.add(new ArrayListGif(new GifRenderer("BG")));
     }
 
-    /**
-     * Returns true if this GUI should pause the game when it is displayed in single-player
-     */
-    public boolean doesGuiPauseGame()
-    {
-        return false;
-    }
-
     @Override
     /**
      * Fired when a key is typed. 
@@ -179,10 +171,10 @@ public class MainMenuGui extends ScreenGui
 		this.drawCenteredStringWithColor(fontRendererObj,"fps: " + MiystEngine.getMiystEngine().debugFPS, (int)(this.width / 18) , (int)(this.height / 6), 1,1,1,1);
 	 }
     
-     private int textureID = MiystEngine.miystengine.getTextureManager().loadTexture2(MiystEngine.miystengine.getPath().sources + "missing_texture" + ".png");
+     private int textureID = MiystEngine.miystengine.getTextureManager().loadTexture(MiystEngine.miystengine.getPath().sources + "missing_texture" + ".png");
     
     
-    private float fadeToBlack = 1F;
+     private float fadeToBlack = 1F;
  
 
     @Override
